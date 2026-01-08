@@ -83,7 +83,7 @@ jobs:
             # Step 1: Generate auto-generated changelog (using a community Action)
             - name: Generate Changelog
               id: changelog
-              uses: requarks/changelog-action@v1
+              uses: requarks/changelog-action@v0
               with:
                   token: ${{ secrets.GITHUB_TOKEN }}
                   tag: v${{ env.version }}
