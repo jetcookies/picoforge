@@ -1,11 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
 import { logger } from "$lib/utils/log.svelte";
 import { DEFAULT_CONFIG, DEFAULT_DEVICE_INFO, VENDORS } from "$lib/device/constants.svelte";
-import type { DeviceConfig, DeviceInfo, SecurityState } from "$lib/device/types.svelte";
+import type { DeviceConfig, DeviceInfo, FidoInfo, SecurityState } from "$lib/device/types.svelte";
 
 class DeviceManager {
   loading = $state(false);
   connected = $state(false);
+  fidoInfo: FidoInfo | null = $state(null);
 
   config: DeviceConfig = $state({ ...DEFAULT_CONFIG });
   info: DeviceInfo = $state({ ...DEFAULT_DEVICE_INFO });
@@ -58,6 +59,19 @@ class DeviceManager {
         secureBoot: status.secure_boot,
         secureLock: status.secure_lock,
         confirmed: false,
+      };
+
+      const fido: any = await invoke("get_fido_info");
+      this.fidoInfo = {
+        versions: fido.versions,
+        extensions: fido.extensions,
+        aaguid: fido.aaguid,
+        options: fido.options,
+        maxMsgSize: fido.max_msg_size,
+        pinProtocols: fido.pin_protocols,
+        // remainingDiscCreds: fido.remaining_disc_creds,
+        minPinLength: fido.min_pin_length,
+        firmwareVersion: fido.firmware_version,
       };
 
       if (!this.connected) {
@@ -160,6 +174,29 @@ class DeviceManager {
       this.config.vid = v.vid;
       this.config.pid = v.pid;
       logger.add(`Selected vendor preset: ${v.label}`, "info");
+    }
+  }
+
+  async changePin(current: string | null, next: string) {
+    try {
+      const res = await invoke("change_fido_pin", { currentPin: current, newPin: next });
+      logger.add(res as string, "success");
+      return { success: true };
+    } catch (err) {
+      logger.add(`PIN Error: ${err}`, "error");
+      return { success: false, msg: err };
+    }
+  }
+
+  async updateMinPinLength(currentPin: string, length: number) {
+    try {
+      const res = await invoke("set_min_pin_length", { currentPin, minPinLength: length });
+      logger.add(res as string, "success");
+      await this.refresh();
+      return { success: true };
+    } catch (err) {
+      logger.add(`Min PIN Error: ${err}`, "error");
+      return { success: false, msg: err };
     }
   }
 }

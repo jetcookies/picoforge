@@ -24,3 +24,15 @@ export interface SecurityState {
   secureLock: boolean;
   confirmed: boolean;
 }
+
+export interface FidoInfo {
+  versions: string[];
+  extensions: string[];
+  aaguid: string;
+  options: Record<string, boolean>;
+  maxMsgSize: number;
+  pinProtocols: number[];
+  // remainingDiscCreds: number;
+  minPinLength: number;
+  firmwareVersion: string;
+}

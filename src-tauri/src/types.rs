@@ -78,6 +78,24 @@ pub struct FullDeviceStatus {
     pub secure_lock: bool,
 }
 
+// Fido stuff:
+
+#[derive(Serialize)]
+pub struct FidoDeviceInfo {
+    pub versions: Vec<String>,
+    pub extensions: Vec<String>,
+    pub aaguid: String,
+    pub options: std::collections::HashMap<String, bool>,
+    pub max_msg_size: i32,
+    pub pin_protocols: Vec<u32>,
+    // pub remaining_disc_creds: u32,
+    pub min_pin_length: u32,
+    pub firmware_version: String,
+}
+
+
+// Error stuff:
+
 #[derive(Debug, thiserror::Error)]
 pub enum AppError {
     #[error("PCSC Error: {0}")]

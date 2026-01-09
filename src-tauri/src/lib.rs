@@ -17,6 +17,7 @@ pub fn run() {
             rescue::read_device_details,
             rescue::get_device_info,
             rescue::write_config,
+            fido::get_fido_info,
             fido::change_fido_pin,
             fido::set_min_pin_length,
             rescue::enable_secure_boot

@@ -1,5 +1,32 @@
 use ctap_hid_fido2::{Cfg, FidoKeyHidFactory};
+use crate::types::FidoDeviceInfo;
+use std::collections::HashMap;
 // use ctap_hid_fido2::fidokey::FidoKeyHid;
+
+#[tauri::command]
+pub(crate) fn get_fido_info() -> Result<FidoDeviceInfo, String> {
+    let cfg = Cfg::init();
+    
+    let device = FidoKeyHidFactory::create(&cfg)
+        .map_err(|_| "Could not connect to FIDO device. Is it plugged in?".to_string())?;
+
+    let info = device
+        .get_info()
+        .map_err(|e| format!("Error reading device info: {:?}", e))?;
+
+    let options_map: HashMap<String, bool> = info.options.into_iter().collect();
+
+    Ok(FidoDeviceInfo {
+        versions: info.versions,
+        extensions: info.extensions,
+        aaguid: hex::encode_upper(info.aaguid),
+        options: options_map,
+        max_msg_size: info.max_msg_size,
+        pin_protocols: info.pin_uv_auth_protocols,
+        min_pin_length: info.min_pin_length,
+        firmware_version: format!("0x{:X}", info.firmware_version),
+    })
+}
 
 #[tauri::command]
 pub(crate) fn change_fido_pin(

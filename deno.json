@@ -4,7 +4,7 @@
   "fmt": {
     "useTabs": false,
     "indentWidth": 2,
-    "lineWidth": 120,
+    "lineWidth": 140,
 
     "include": ["src"],
 
