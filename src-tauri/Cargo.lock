@@ -2939,8 +2939,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "pico-forge"
-version = "0.1.0"
+name = "picoforge"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "byteorder",

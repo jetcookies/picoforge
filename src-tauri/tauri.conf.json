@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "pico-forge",
-  "version": "0.1.0",
-  "identifier": "in.suyogtandel.pico-forge",
+  "productName": "picoforge",
+  "version": "0.1.1",
+  "identifier": "in.suyogtandel.picoforge",
   "build": {
     "beforeDevCommand": "deno task dev",
     "devUrl": "http://localhost:1420",

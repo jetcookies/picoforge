@@ -6,8 +6,7 @@
 
 **An open source commissioning tool for Pico FIDO security keys**
 
-> [!NOTE] 
->
+> [!NOTE]
 > PicoForge is an independent, community-developed tool and is not affiliated with or endorsed by the official Pico FIDO project. This software does not share any code with the official closed-source Pico FIDO commissioning application.
 
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL%203.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
