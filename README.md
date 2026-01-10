@@ -15,6 +15,10 @@
 > [!IMPORTANT]
 > PicoForge is an independent, community-developed tool and is not affiliated with or endorsed by the official [pico-fido](https://github.com/polhenarejos/pico-fido) project. 
 > This software does not share any code with the official closed-source pico-fido application.
+>
+> For some reason, when running the app on windows, it needs to be ran as administrator or it cannot detect the device, this will be fixed in future. Till then run the app as admin.
+>
+> For linux users if RPM or DEB does not work or not supported on the distro, it is better to compile the app from source and use it, AppImages does not work correctly as of now.
 
 ## About
 
@@ -106,13 +110,17 @@ The compiled binaries will be available in:
 
 #### Linux
 
-Install PC/SC dependencies:
+- AppImages do not work, either use DEBs or RPMs, or build from source.
+
+- Flatpaks are planned for future `BETA` versions of the apps.
+
+- Install PC/SC dependencies:
 
 ```bash
 sudo apt install libpcsclite-dev pcscd
 ```
 
-Start the PC/SC daemon:
+- Start the PC/SC daemon:
 
 ```bash
 sudo systemctl start pcscd
@@ -121,11 +129,15 @@ sudo systemctl enable pcscd
 
 #### macOS
 
-No additional setup required. PC/SC framework is built-in.
+- App has not been tested by me on macos and I cannot debug for it ( as I do not have a mac ), if someone is ready to help me, just open an issue or message me on the discord server.
+
+- No additional setup required. PC/SC framework is built-in.
 
 #### Windows
 
-Ensure Smart Card service is running:
+- Run the app as `Administrator` or it will not work correctly or fail to detect the device.
+
+- Ensure Smart Card service is running:
 
 ```powershell
 Get-Service SCardSvr | Start-Service
@@ -194,7 +206,7 @@ picoforge/
 
 ## Contributing
 
-Contributions are welcome! Please follow these steps:
+Contributions are welcome (REALLY NEEDED, PLEASE HELP ME)! Please follow these steps:
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)

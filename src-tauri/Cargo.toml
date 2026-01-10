@@ -31,6 +31,10 @@ byteorder = "1.5"      # Required for writing Big-Endian numbers (firmware requi
 thiserror = "2"        # Makes custom error handling much easier
 anyhow = "1"           # For easy error propagation
 ctap-hid-fido2 = "3.5" # For fido2 interface operations
+hidapi = "2.6"         # For fido2 interface operations but non-standard commands
+serde_cbor_2 = "0.13"
+rand = "0.9"
+bitflags = "2.10"
 
 log = "0.4"            # Logging facade
 log4rs = "1"           # For logging to output (like stdout)

@@ -75,10 +75,7 @@ class DeviceManager {
       };
 
       if (!this.connected) {
-        logger.add(
-          `Device Connected! Serial: ${this.info.serial}, FW: v${this.info.firmwareVersion}`,
-          "success",
-        );
+        logger.add(`Device Connected! Serial: ${this.info.serial}, FW: v${this.info.firmwareVersion}`, "success");
       }
       this.connected = true;
     } catch (err) {
@@ -128,7 +125,8 @@ class DeviceManager {
         logger.add(`Queuing change: Timeout -> ${this.config.touchTimeout}`, "info");
       }
 
-      const optionsChanged = this.config.ledDimmable !== this.#originalConfig.ledDimmable ||
+      const optionsChanged =
+        this.config.ledDimmable !== this.#originalConfig.ledDimmable ||
         this.config.powerCycleOnReset !== this.#originalConfig.powerCycleOnReset ||
         this.config.ledSteady !== this.#originalConfig.ledSteady;
 

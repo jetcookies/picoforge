@@ -1,0 +1,43 @@
+//! Tauri Commands to interact with the pico-fido firmware via rescue and fido protocols.
+use crate::{fido, rescue, types::*};
+
+#[tauri::command]
+pub fn read_device_details() -> Result<FullDeviceStatus, AppError> {
+	rescue::read_device_details()
+}
+
+#[tauri::command]
+pub fn write_config(config: AppConfigInput) -> Result<String, AppError> {
+	rescue::write_config(config)
+}
+
+#[tauri::command]
+pub fn enable_secure_boot(lock: bool) -> Result<String, AppError> {
+	rescue::enable_secure_boot(lock)
+}
+
+#[tauri::command]
+pub(crate) fn get_fido_info() -> Result<FidoDeviceInfo, String> {
+	fido::get_fido_info()
+}
+
+#[tauri::command]
+pub(crate) fn change_fido_pin(
+	current_pin: Option<String>,
+	new_pin: String,
+) -> Result<String, String> {
+	fido::change_fido_pin(current_pin, new_pin)
+}
+
+#[tauri::command]
+pub(crate) fn set_min_pin_length(
+	current_pin: String,
+	min_pin_length: u8,
+) -> Result<String, String> {
+	fido::set_min_pin_length(current_pin, min_pin_length)
+}
+
+#[tauri::command]
+pub fn reboot(to_bootsel: bool) -> Result<String, AppError> {
+	rescue::reboot_device(to_bootsel)
+}
