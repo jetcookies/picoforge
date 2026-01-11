@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { logger } from "$lib/utils/log.svelte";
+import { logger } from "$lib/services/log.svelte";
 import { DEFAULT_CONFIG, DEFAULT_DEVICE_INFO, VENDORS } from "$lib/device/constants.svelte";
 import type {
   DeviceConfig,
