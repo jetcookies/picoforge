@@ -17,8 +17,6 @@
 > This software does not share any code with the official closed-source pico-fido application.
 >
 > For some reason, when running the app on windows, it needs to be ran as administrator or it cannot detect the device, this will be fixed in future. Till then run the app as admin.
->
-> For linux users if RPM or DEB does not work or not supported on the distro, it is better to compile the app from source and use it, AppImages does not work correctly as of now.
 
 ## About
 
@@ -32,8 +30,6 @@ PicoForge is a modern desktop application for configuring and managing Pico FIDO
 - Support for multiple hardware variants and vendors
 
 > **Alpha Status**: This application is currently under active development and in alpha stage. Users should expect bugs and are encouraged to report them. The app has been tested on Linux and Windows 10 with the official Raspberry Pi Pico2 and currently supports Pico FIDO firmware version 7.2 only.
->
-> The AppImage in the release builds have a lot of issues right now, I will fix them in the next or upcomming releases, till then you can either complie the app from source or use the .deb/.rpm versions from the releases.
 
 ## Screenshots
 
@@ -113,7 +109,7 @@ The compiled binaries will be available in:
 
 #### Linux
 
-- AppImages do not work, either use DEBs or RPMs, or build from source.
+- AppImages are preferred way to use the applicatoion, just make sure you have pcsc daemon installed and running before starting the appimage.
 
 - Flatpaks are planned for future `BETA` versions of the apps.
 

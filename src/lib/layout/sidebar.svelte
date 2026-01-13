@@ -35,18 +35,6 @@
     { view: "about", icon: Info, label: "About" },
   ];
 
-  function minimize() {
-    appWindow.minimize();
-  }
-
-  async function toggleMaximize() {
-    await appWindow.toggleMaximize();
-  }
-
-  function closeApp() {
-    appWindow.close();
-  }
-
   onMount(() => {
     const setupWindow = async () => {
       isMaximized = await appWindow.isMaximized();
@@ -83,7 +71,7 @@
             {#each menuItems as item}
               <Sidebar.MenuItem>
                 <Sidebar.MenuButton isActive={currentView === item.view} onclick={() => onViewChange(item.view)}>
-                  <svelte:component this={item.icon} />
+                  <item.icon />
                   <span>{item.label}</span>
                 </Sidebar.MenuButton>
               </Sidebar.MenuItem>
@@ -130,11 +118,11 @@
       </div>
 
       <div class="flex items-center gap-1">
-        <Button variant="ghost" size="icon" class="h-8 w-8 hover:bg-muted" onclick={minimize}>
+        <Button variant="ghost" size="icon" class="h-8 w-8 hover:bg-muted" onclick={() => appWindow.minimize()}>
           <Minus class="h-4 w-4" />
         </Button>
 
-        <Button variant="ghost" size="icon" class="h-8 w-8 hover:bg-muted" onclick={toggleMaximize}>
+        <Button variant="ghost" size="icon" class="h-8 w-8 hover:bg-muted" onclick={() => appWindow.toggleMaximize()}>
           {#if isMaximized}
             <Minimize class="h-3.5 w-3.5 rotate-180" />
           {:else}
@@ -142,7 +130,12 @@
           {/if}
         </Button>
 
-        <Button variant="ghost" size="icon" class="h-8 w-8 hover:bg-red-500 hover:text-white transition-colors" onclick={closeApp}>
+        <Button
+          variant="ghost"
+          size="icon"
+          class="h-8 w-8 hover:bg-red-500 hover:text-white transition-colors"
+          onclick={() => appWindow.close()}
+        >
           <X class="h-4 w-4" />
         </Button>
       </div>
