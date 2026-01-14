@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "picoforge",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "identifier": "in.suyogtandel.picoforge",
   "build": {
     "beforeDevCommand": "deno task dev",
@@ -13,7 +13,7 @@
     "macOSPrivateApi": true,
     "windows": [
       {
-        "title": "pico-forge",
+        "title": "picoforge",
         "width": 1280,
         "height": 720,
         "minWidth": 500,

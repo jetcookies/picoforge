@@ -5,6 +5,7 @@
   import * as Card from "$lib/components/ui/card";
   import * as Alert from "$lib/components/ui/alert";
   import * as Dialog from "$lib/components/ui/dialog";
+  import * as AlertDialog from "$lib/components/ui/alert-dialog";
   import * as Drawer from "$lib/components/ui/drawer";
   import { Badge } from "$lib/components/ui/badge";
   import { Separator } from "$lib/components/ui/separator";
@@ -20,6 +21,10 @@
   let detailsOpen = $state(false);
   let selectedCredential: StoredCredential | null = $state(null);
 
+  let deleteDialogOpen = $state(false);
+  let credentialToDelete: StoredCredential | null = $state(null);
+  let deleteConfirmationInput = $state("");
+
   $effect(() => {
     if (device.connected && !device.unlocked) {
       showPinDialog = true;
@@ -34,6 +39,7 @@
       return;
     }
 
+    loading = true;
     const res = await device.getCredentials(pin);
 
     if (!res.success) {
@@ -43,30 +49,42 @@
     loading = false;
   }
 
-  async function handleDelete(id: string, rpId: string) {
-    if (!confirm(`Are you sure you want to delete the passkey for "${rpId}"?`)) return;
-    loading = true;
+  function initiateDelete(cred: StoredCredential) {
+    credentialToDelete = cred;
+    deleteConfirmationInput = "";
+    deleteDialogOpen = true;
+  }
 
-    const res = await device.deleteCredential(pin, id);
+  async function executeDelete() {
+    if (!credentialToDelete) return;
+
+    loading = true;
+    const { credentialId } = credentialToDelete;
+
+    const res = await device.deleteCredential(pin, credentialId);
 
     if (res.success) {
       await device.getCredentials(pin);
 
-      if (selectedCredential?.credentialId === id) {
+      if (selectedCredential?.credentialId === credentialId) {
         detailsOpen = false;
         selectedCredential = null;
       }
+
+      deleteDialogOpen = false;
+      credentialToDelete = null;
     } else {
+      deleteDialogOpen = false;
       error = typeof res.msg === "string" ? res.msg : "Failed to delete credential";
     }
+
     loading = false;
   }
 
   function handleLock() {
-    device.lock(); // Clears global state
+    device.lock();
     pin = "";
     error = "";
-    // The effect will see device.unlocked is false and open the dialog
   }
 
   function openDetails(cred: StoredCredential) {
@@ -75,6 +93,7 @@
   }
 </script>
 
+<!-- TODO: Move the dialogs to their own files in src/lib/components/dialogs -->
 <div class="space-y-6">
   <div>
     <h1 class="text-3xl font-bold tracking-tight">Passkeys</h1>
@@ -172,6 +191,7 @@
                       >
                         <KeyRound class="h-5 w-5 text-primary" />
                       </div>
+
                       <div class="flex-1 min-w-0">
                         <h4 class="font-semibold text-base truncate">
                           {cred.rpName || cred.rpId || "Unknown Service"}
@@ -186,11 +206,11 @@
                       class="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0"
                       onclick={(e) => {
                         e.stopPropagation();
-                        handleDelete(cred.credentialId, cred.rpId);
+                        initiateDelete(cred);
                       }}
                       disabled={loading}
                     >
-                      {#if loading}
+                      {#if loading && credentialToDelete?.credentialId === cred.credentialId}
                         <Loader2 class="h-4 w-4 animate-spin" />
                       {:else}
                         <Trash2 class="h-4 w-4" />
@@ -255,6 +275,47 @@
           </div>
         </Drawer.Content>
       </Drawer.Root>
+
+      <AlertDialog.Root bind:open={deleteDialogOpen}>
+        <AlertDialog.Content>
+          <AlertDialog.Header>
+            <AlertDialog.Title>Are you sure?</AlertDialog.Title>
+            <AlertDialog.Description>
+              This action cannot be undone. This will permanently delete the passkey for
+              <span class="font-semibold text-foreground">{credentialToDelete?.rpId}</span>.
+            </AlertDialog.Description>
+          </AlertDialog.Header>
+
+          <div class="py-4 space-y-3">
+            <Label for="confirm-delete">
+              Type <span class="font-mono text-xs bg-muted px-1 py-0.5 rounded">{credentialToDelete?.rpId}</span> to confirm
+            </Label>
+            <Input
+              id="confirm-delete"
+              bind:value={deleteConfirmationInput}
+              placeholder={credentialToDelete?.rpId}
+              autocomplete="off"
+              class="font-mono"
+            />
+          </div>
+
+          <AlertDialog.Footer>
+            <AlertDialog.Cancel disabled={loading}>Cancel</AlertDialog.Cancel>
+            <Button
+              variant="destructive"
+              onclick={executeDelete}
+              disabled={deleteConfirmationInput !== credentialToDelete?.rpId || loading}
+            >
+              {#if loading}
+                <Loader2 class="mr-2 h-4 w-4 animate-spin" />
+                Deleting...
+              {:else}
+                Delete Passkey
+              {/if}
+            </Button>
+          </AlertDialog.Footer>
+        </AlertDialog.Content>
+      </AlertDialog.Root>
     {/if}
   {/if}
 </div>
