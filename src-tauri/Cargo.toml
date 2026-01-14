@@ -42,7 +42,7 @@ log4rs = "1"           # For logging to output (like stdout)
 directories = "6"      # For Applcation config/data dir handling
 
 [profile.dev]
-incremental = true # Compile your binary in smaller steps.
+incremental = true     # Compile your binary in smaller steps.
 codegen-units = 256
 
 [profile.release]

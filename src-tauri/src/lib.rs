@@ -1,5 +1,5 @@
 use serde::Serialize;
-use tauri::{Emitter, Listener, Manager, WebviewWindow};
+use tauri::{Emitter, Manager, WebviewWindow};
 
 mod error;
 mod fido;
@@ -49,6 +49,8 @@ pub fn run() {
 			io::write_config,
 			io::get_fido_info,
 			io::change_fido_pin,
+			io::get_credentials,
+			io::delete_credential,
 			io::set_min_pin_length,
 			io::enable_secure_boot,
 			io::reboot

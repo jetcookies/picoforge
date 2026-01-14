@@ -5,10 +5,12 @@ pub mod hid;
 
 use crate::{
 	error::PFError,
-	types::{AppConfig, DeviceInfo, FidoDeviceInfo, FullDeviceStatus},
+	types::{AppConfig, DeviceInfo, FidoDeviceInfo, FullDeviceStatus, StoredCredential},
 };
 use constants::*;
-use ctap_hid_fido2::{Cfg, FidoKeyHidFactory};
+use ctap_hid_fido2::{
+	Cfg, FidoKeyHidFactory, public_key_credential_descriptor::PublicKeyCredentialDescriptor,
+};
 use hid::*;
 use serde_cbor_2::{Value, from_slice, to_vec};
 use std::collections::{BTreeMap, HashMap};
@@ -79,6 +81,62 @@ pub(crate) fn set_min_pin_length(
 		"Minimum PIN length successfully set to {}",
 		min_pin_length
 	))
+}
+
+pub(crate) fn get_credentials(pin: String) -> Result<Vec<StoredCredential>, String> {
+	let cfg = Cfg::init();
+	let device = FidoKeyHidFactory::create(&cfg)
+		.map_err(|e| format!("Failed to connect to FIDO device: {:?}", e))?;
+
+	let rps = device
+		.credential_management_enumerate_rps(Some(&pin))
+		.map_err(|e| format!("Failed to enumerate Relying Parties: {:?}", e))?;
+
+	let mut all_credentials = Vec::new();
+
+	for rp in rps {
+		let creds = device
+			.credential_management_enumerate_credentials(Some(&pin), &rp.rpid_hash)
+			.map_err(|e| {
+				format!(
+					"Failed to enumerate credentials for RP {}: {:?}",
+					rp.public_key_credential_rp_entity.id, e
+				)
+			})?;
+
+		for cred in creds {
+			all_credentials.push(StoredCredential {
+				credential_id: hex::encode(&cred.public_key_credential_descriptor.id),
+				rp_id: rp.public_key_credential_rp_entity.id.clone(),
+				rp_name: rp.public_key_credential_rp_entity.name.clone(),
+				user_name: cred.public_key_credential_user_entity.name.clone(),
+				user_display_name: cred.public_key_credential_user_entity.display_name.clone(),
+				user_id: hex::encode(&cred.public_key_credential_user_entity.id).clone(),
+			});
+		}
+	}
+
+	Ok(all_credentials)
+}
+
+pub(crate) fn delete_credential(pin: String, credential_id_hex: String) -> Result<String, String> {
+	let cfg = Cfg::init();
+	let device = FidoKeyHidFactory::create(&cfg)
+		.map_err(|e| format!("Failed to connect to FIDO device: {:?}", e))?;
+
+	let cred_id_bytes = hex::decode(&credential_id_hex)
+		.map_err(|_| "Invalid Credential ID Hex string".to_string())?;
+
+	let descriptor = PublicKeyCredentialDescriptor {
+		ctype: "public-key".to_string(),
+		id: cred_id_bytes,
+	};
+
+	device
+		.credential_management_delete_credential(Some(&pin), descriptor)
+		.map_err(|e| format!("Failed to delete credential: {:?}", e))?;
+
+	Ok("Credential deleted successfully".into())
 }
 
 // Custom Fido functions ( works only with pico-fido firmware )

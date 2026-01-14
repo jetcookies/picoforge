@@ -3,7 +3,7 @@
   import { getCurrentWindow } from "@tauri-apps/api/window";
   import { listen } from "@tauri-apps/api/event";
 
-  import { Home, Info, Maximize, Minimize, Minus, RefreshCw, ScrollText, Settings, ShieldCheck, X } from "@lucide/svelte";
+  import { Home, Info, KeyRound, Maximize, Minimize, Minus, RefreshCw, ScrollText, Settings, ShieldCheck, X } from "@lucide/svelte";
   import type { Component } from "svelte";
 
   import { Button } from "$lib/components/ui/button";
@@ -12,7 +12,7 @@
 
   import { device } from "$lib/device/manager.svelte";
 
-  type View = "home" | "config" | "security" | "logs" | "about";
+  type View = "home" | "passkeys" | "config" | "security" | "logs" | "about";
 
   interface Props {
     currentView: View;
@@ -29,6 +29,7 @@
 
   const menuItems: Array<{ view: View; icon: Component; label: string }> = [
     { view: "home", icon: Home, label: "Home" },
+    { view: "passkeys", icon: KeyRound, label: "Passkeys" },
     { view: "config", icon: Settings, label: "Configuration" },
     { view: "security", icon: ShieldCheck, label: "Security" },
     { view: "logs", icon: ScrollText, label: "Logs" },

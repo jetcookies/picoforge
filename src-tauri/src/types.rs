@@ -72,3 +72,14 @@ pub struct FidoDeviceInfo {
 	pub min_pin_length: u32,
 	pub firmware_version: String,
 }
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StoredCredential {
+	pub rp_id: String,
+	pub rp_name: String,
+	pub user_name: String,
+	pub user_display_name: String,
+	pub user_id: String,
+	pub credential_id: String,
+}

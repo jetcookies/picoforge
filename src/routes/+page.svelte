@@ -8,6 +8,7 @@
 
   import SidebarMenu from "$lib/layout/sidebar.svelte";
   import HomeView from "$lib/views/homeView.svelte";
+  import PasskeysView from "$lib/views/passkeysView.svelte";
   import ConfigView from "$lib/views/configView.svelte";
   import SecurityView from "$lib/views/securityView.svelte";
   import LogsView from "$lib/views/logsView.svelte";
@@ -17,11 +18,12 @@
   import MinPinDialog from "$lib/components/dialogs/minPinDialog.svelte";
   import MessageDialog from "$lib/components/dialogs/messageDialog.svelte";
 
-  type View = "home" | "config" | "security" | "logs" | "about";
+  type View = "home" | "passkeys" | "config" | "security" | "logs" | "about";
   let currentView: View = $state("home");
 
   const viewMap = {
     home: HomeView,
+    passkeys: PasskeysView,
     config: ConfigView,
     security: SecurityView,
     logs: LogsView,

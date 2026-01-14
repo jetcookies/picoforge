@@ -43,3 +43,17 @@ pub(crate) fn set_min_pin_length(
 pub fn reboot(to_bootsel: bool) -> Result<String, PFError> {
 	rescue::reboot_device(to_bootsel)
 }
+
+#[tauri::command]
+pub async fn get_credentials(pin: String) -> Result<Vec<StoredCredential>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        fido::get_credentials(pin)
+    }).await.map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn delete_credential(pin: String, credential_id: String) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        fido::delete_credential(pin, credential_id)
+    }).await.map_err(|e| e.to_string())?
+}

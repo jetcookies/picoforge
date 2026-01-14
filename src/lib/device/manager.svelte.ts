@@ -8,12 +8,16 @@ import type {
   SecurityState,
   FullDeviceStatus,
   DeviceConfigInput,
+  StoredCredential,
 } from "$lib/device/types.svelte";
 
 class DeviceManager {
   loading = $state(false);
   connected = $state(false);
   fidoInfo: FidoInfo | null = $state(null);
+
+  credentials: StoredCredential[] = $state([]);
+  unlocked = $state(false);
 
   config: DeviceConfig = $state({ ...DEFAULT_CONFIG });
   info: DeviceInfo = $state({ ...DEFAULT_DEVICE_INFO });
@@ -178,6 +182,39 @@ class DeviceManager {
       return { success: true };
     } catch (err) {
       logger.add(`Min PIN Error: ${err}`, "error");
+      return { success: false, msg: err };
+    }
+  }
+
+  async getCredentials(pin: string): Promise<{ success: boolean; data?: StoredCredential[]; msg?: string }> {
+    try {
+      logger.add("Fetching credentials...", "info");
+      const creds = await invoke<StoredCredential[]>("get_credentials", { pin });
+
+      this.credentials = creds;
+      this.unlocked = true;
+
+      logger.add(`Retrieved ${creds.length} credentials.`, "success");
+      return { success: true, data: creds };
+    } catch (err: any) {
+      logger.add(`Failed to fetch credentials: ${err}`, "error");
+      return { success: false, msg: err };
+    }
+  }
+
+  lock() {
+    this.credentials = [];
+    this.unlocked = false;
+  }
+
+  async deleteCredential(pin: string, credentialId: string): Promise<{ success: boolean; msg?: string }> {
+    try {
+      logger.add("Deleting credential...", "info");
+      const res = await invoke<string>("delete_credential", { pin, credentialId });
+      logger.add(res, "success");
+      return { success: true, msg: res };
+    } catch (err: any) {
+      logger.add(`Failed to delete credential: ${err}`, "error");
       return { success: false, msg: err };
     }
   }

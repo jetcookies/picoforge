@@ -57,3 +57,12 @@ export interface FidoInfo {
   minPinLength: number;
   firmwareVersion: string;
 }
+
+export interface StoredCredential {
+  credentialId: string;
+  rpId: string;
+  rpName: string;
+  userId: string;
+  userName: string;
+  userDisplayName: string;
+}
