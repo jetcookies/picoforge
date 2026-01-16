@@ -67,7 +67,7 @@ install -m 755 src-tauri/target/release/picoforge %{buildroot}%{_bindir}/%{name}
 install -m 644 data/in.suyogtandel.picoforge.desktop %{buildroot}%{_datadir}/applications/%{name}.desktop
 
 # 3. Install Icon (Assumes you have this icon in your source)
-install -m 644 src-tauri/icons/in.suyogtandel.picoforge.svg %{buildroot}%{_datadir}/icons/hicolor/scalable/apps/%{name}.png
+install -m 644 src-tauri/icons/in.suyogtandel.picoforge.svg %{buildroot}%{_datadir}/icons/hicolor/scalable/apps/in.suyogtandel.picoforge.svg
 
 %files
 %{_bindir}/%{name}
