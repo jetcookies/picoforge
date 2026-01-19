@@ -15,6 +15,7 @@ class DeviceManager {
   loading = $state(false);
   connected = $state(false);
   fidoInfo: FidoInfo | null = $state(null);
+  error: string | null = $state(null);
 
   credentials: StoredCredential[] = $state([]);
   unlocked = $state(false);
@@ -38,6 +39,7 @@ class DeviceManager {
 
   async refresh() {
     this.loading = true;
+    this.error = null;
     try {
       logger.add("Attempting to connect to device...", "info");
 
@@ -66,12 +68,25 @@ class DeviceManager {
         logger.add(`Device Connected! Serial: ${this.info.serial}, FW: v${this.info.firmwareVersion}`, "success");
       }
       this.connected = true;
-    } catch (err) {
+    } catch (err: any) {
       console.error("Connection failed:", err);
-      if (this.connected) {
-        logger.add(`Connection lost: ${err}`, "error");
+
+      // Handle structured error from Rust (PFError)
+      if (err && typeof err === "object" && err.type === "NoDevice") {
+        this.error = null;
+        this.connected = false;
+        // Don't log "No device" as an error to the user log system, 
+        // it's a normal state when nothing is plugged in.
+      } else {
+        const msg = typeof err === "string" ? err : err.message || JSON.stringify(err);
+        this.error = msg;
+        if (this.connected) {
+          logger.add(`Connection lost: ${msg}`, "error");
+        } else {
+          logger.add(`Connection failed: ${msg}`, "error");
+        }
+        this.connected = false;
       }
-      this.connected = false;
     } finally {
       this.loading = false;
     }
