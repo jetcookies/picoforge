@@ -292,7 +292,13 @@ pub fn read_device_details() -> Result<FullDeviceStatus, PFError> {
 			Vec::new()
 		});
 
-	let mut config = AppConfig::default();
+	let mut config = AppConfig {
+		vid: format!("{:04X}", transport.vid),
+		pid: format!("{:04X}", transport.pid),
+		product_name: transport.product_name.clone(),
+		..Default::default()
+	};
+
 	if let Ok(Value::Map(m)) = from_slice(&phy_res) {
 		log::debug!("Parsed Physical Config map successfully");
 		// These keys might need adjustment based on exact firmware response structure
