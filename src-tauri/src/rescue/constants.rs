@@ -1,4 +1,5 @@
 //! Constants, enums, bitflags and data structures for Rescue Application for pico-fido firmware.
+#![allow(unused)]
 
 // use serde::{Deserialize, Serialize};
 // use std::fmt;
