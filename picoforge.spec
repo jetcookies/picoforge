@@ -79,6 +79,46 @@ install -m 644 src-tauri/icons/in.suyogtandel.picoforge.svg %{buildroot}%{_datad
 %{_datadir}/icons/hicolor/scalable/apps/in.suyogtandel.picoforge.svg
 
 %changelog
+* Thu Jan 22 2026 Suyog Tandel <git@suyogtandel.in> 0.3.0-1
+- chore: sync spec to 0.3.0 [skip ci] (git@suyogtandel.in)
+- chore: bump app version to 0.3.0 (git@suyogtandel.in)
+- fix(docs): typo in troubleshooting.md (git@suyogtandel.in)
+- Fix #20 (fabrice.bellamy@distrilab.fr)
+- Add Nix-shell development environment section
+  (38373466+Lab-8916100448256@users.noreply.github.com)
+- Add troubleshooting section for pcsc issues with generic VID/PID
+  (38373466+Lab-8916100448256@users.noreply.github.com)
+- Update Installation.md with pcsc-lite installation instructions for Debian
+  and NixOS (38373466+Lab-8916100448256@users.noreply.github.com)
+- implement fido fallback for writeConfig (12b@distrilab.fr)
+- build(package.nix): add wrapGAppsHook3 & copyDesktopItems to
+  nativeBuildInputs (226018678+jetcookies@users.noreply.github.com)
+- restore behavior when no device found as normal offline state instead of an
+  error (fabrice.bellamy@distrilab.fr)
+- move the connection method indication to the sidebar
+  (fabrice.bellamy@distrilab.fr)
+- format firmware version as major.minor and do not use AAGUID as serial number
+  because it is too long and already displayed somwhere else
+  (fabrice.bellamy@distrilab.fr)
+- get device VID, PID and product name in fido::read_device_details()
+  (fabrice.bellamy@distrilab.fr)
+- display device connection method on frontend (fabrice.bellamy@distrilab.fr)
+- Fallback to fido::read_device_details when rescue::read_device_details fails
+  (fabrice.bellamy@distrilab.fr)
+- fix(docs): incorrect github-wiki-action parameter (git@suyogtandel.in)
+- chore(docs): Add doc files and wiki-sync-workflow in the repo for easy wiki
+  edit (git@suyogtandel.in)
+- fix(doc): readme.md formatting (git@suyogtandel.in)
+- do not display the "no device found" case as an error
+  (fabrice.bellamy@distrilab.fr)
+- Display error instead of  when there was an error communicating with pcscd
+  (fabrice.bellamy@distrilab.fr)
+- docs(README.md): add instructions for building with nix
+  (226018678+jetcookies@users.noreply.github.com)
+- ci: update release workflow to handle tito version update
+  (git@suyogtandel.in)
+- Fix/copr builds (#13) (git@suyogtandel.in)
+
 * Sat Jan 17 2026 Suyog Tandel <git@suyogtandel.in> 0.2.1-5
 - fix: explicit gcc and make dependencies (git@suyogtandel.in)
 
