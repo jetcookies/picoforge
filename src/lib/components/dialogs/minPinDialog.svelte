@@ -72,7 +72,7 @@
       <AlertDialog.Cancel onclick={() => (configState.minPinDialogOpen = false)}
         >Cancel</AlertDialog.Cancel
       >
-      <AlertDialog.Action onclick={configState.handleMinPinChange}
+      <AlertDialog.Action onclick={() => configState.handleMinPinChange()}
         >Update</AlertDialog.Action
       >
     </AlertDialog.Footer>
