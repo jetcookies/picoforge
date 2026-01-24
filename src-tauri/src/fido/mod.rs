@@ -364,12 +364,19 @@ fn read_physical_config(transport: &HidTransport) -> Result<AppConfig, PFError> 
 		log::debug!("Parsed Physical Config map successfully");
 		if let Some(Value::Integer(v)) = m.get(&Value::Text("gpio".into())) {
 			config.led_gpio = *v as u8;
+		} else {
+			log::warn!("No led_gpio in CBOR map");
 		}
+
 		if let Some(Value::Integer(v)) = m.get(&Value::Text("brightness".into())) {
 			config.led_brightness = *v as u8;
+		} else {
+			log::warn!("No led_brightness in CBOR map");
 		}
 	} else if !phy_res.is_empty() {
-		log::warn!("Physical config response was not a valid CBOR map or empty");
+		log::warn!("Physical config response was not a valid CBOR map");
+	} else {
+		log::debug!("Physical config response was empty or already handled.");
 	}
 
 	Ok(config)
@@ -432,6 +439,8 @@ pub fn write_config(config: AppConfigInput, pin: Option<String>) -> Result<Strin
 			VendorConfigCommand::PhysicalVidPid,
 			Value::Integer(vidpid as i128),
 		)?;
+	} else {
+		log::info!("VID/PID configuration not provided, skipping update.");
 	}
 
 	// LED GPIO config
@@ -441,6 +450,8 @@ pub fn write_config(config: AppConfigInput, pin: Option<String>) -> Result<Strin
 			VendorConfigCommand::PhysicalLedGpio,
 			Value::Integer(gpio as i128),
 		)?;
+	} else {
+		log::info!("LED GPIO configuration not provided, skipping update.");
 	}
 
 	// LED brightness config
@@ -450,6 +461,8 @@ pub fn write_config(config: AppConfigInput, pin: Option<String>) -> Result<Strin
 			VendorConfigCommand::PhysicalLedBrightness,
 			Value::Integer(brightness as i128),
 		)?;
+	} else {
+		log::info!("LED brightness configuration not provided, skipping update.");
 	}
 
 	// Options config
@@ -472,6 +485,8 @@ pub fn write_config(config: AppConfigInput, pin: Option<String>) -> Result<Strin
 				Value::Integer(timeout as i128),
 			)
 			.ok();
+	} else {
+		log::info!("Touch timeout configuration not provided, skipping update.");
 	}
 
 	transport.send_vendor_config(

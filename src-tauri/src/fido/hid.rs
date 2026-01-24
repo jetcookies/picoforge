@@ -127,6 +127,11 @@ impl HidTransport {
 					let new_cid = u32::from_be_bytes([buf[15], buf[16], buf[17], buf[18]]);
 					log::debug!("Channel negotiation successful. New CID: 0x{:08X}", new_cid);
 					return Ok(new_cid);
+				} else {
+					log::trace!(
+						"Received ignoreable HID packet during CID negotiation: {:02X?}",
+						&buf[0..16]
+					);
 				}
 			}
 		}
@@ -168,8 +173,10 @@ impl HidTransport {
 			log::error!("Failed to write initial HID packet: {}", e);
 			return Err(PFError::Io(format!(
 				"Failed to write initial HID packet: {}",
-				e
+				e,
 			)));
+		} else {
+			log::trace!("Successfully sent initial HID packet");
 		}
 
 		// 2. Continuation Packets
@@ -192,8 +199,13 @@ impl HidTransport {
 				);
 				return Err(PFError::Io(format!(
 					"Failed to write continuation HID packet: {}",
-					e
+					e,
 				)));
+			} else {
+				log::trace!(
+					"Successfully sent continuation HID packet (Seq {})",
+					sequence - 1
+				);
 			}
 		}
 
@@ -246,8 +258,10 @@ impl HidTransport {
 			log::error!("Device returned CTAP Error code: 0x{:02X}", buf[5]);
 			return Err(PFError::Device(format!(
 				"Device returned CTAP Error: 0x{:02X}",
-				buf[5]
+				buf[5],
 			)));
+		} else {
+			log::trace!("Packet received is not a CTAP Error");
 		}
 
 		if buf[4] == cmd {
