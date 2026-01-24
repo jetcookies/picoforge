@@ -4,7 +4,8 @@ pub mod hid;
 use crate::{
 	error::PFError,
 	types::{
-		AppConfig, AppConfigInput, DeviceInfo, FidoDeviceInfo, FullDeviceStatus, StoredCredential,
+		AppConfig, AppConfigInput, DeviceInfo, DeviceMethod, FidoDeviceInfo, FullDeviceStatus,
+		StoredCredential,
 	},
 };
 use constants::*;
@@ -221,7 +222,7 @@ pub fn read_device_details() -> Result<FullDeviceStatus, PFError> {
 		config,
 		secure_boot: false,
 		secure_lock: false,
-		method: "FIDO".to_string(),
+		method: DeviceMethod::FIDO,
 	})
 }
 
