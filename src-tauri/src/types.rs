@@ -55,7 +55,13 @@ pub struct FullDeviceStatus {
 	pub config: AppConfig,
 	pub secure_boot: bool,
 	pub secure_lock: bool,
-	pub method: String,
+	pub method: DeviceMethod,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub enum DeviceMethod {
+	FIDO,
+	Rescue,
 }
 
 // Fido stuff:
