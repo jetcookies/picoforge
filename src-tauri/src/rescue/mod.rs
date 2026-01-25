@@ -6,7 +6,6 @@ pub mod constants;
 
 use crate::{error::PFError, rescue::constants::*, types::*};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use log;
 use pcsc::{Context, Protocols, Scope, ShareMode};
 use std::io::Cursor;
 
@@ -322,19 +321,17 @@ pub fn write_config(config: AppConfigInput) -> Result<String, PFError> {
 	}
 
 	// Product Name (Tag 0x09)
-	if let Some(name) = config.product_name {
-		if !name.is_empty() {
-			let name_bytes = name.as_bytes();
-			let len = name_bytes.len() + 1;
-			if len > 32 {
-				return Err(PFError::Io("Product name too long".into()));
-			}
-
-			tlv.push(PhyTag::UsbProduct as u8);
-			tlv.push(len as u8);
-			tlv.extend_from_slice(name_bytes);
-			tlv.push(0x00); // Null terminator
+	if let Some(name) = config.product_name.filter(|n| !n.is_empty()) {
+		let name_bytes = name.as_bytes();
+		let len = name_bytes.len() + 1;
+		if len > 32 {
+			return Err(PFError::Io("Product name too long".into()));
 		}
+
+		tlv.push(PhyTag::UsbProduct as u8);
+		tlv.push(len as u8);
+		tlv.extend_from_slice(name_bytes);
+		tlv.push(0x00); // Null terminator
 	}
 
 	// 2. Connect and Send

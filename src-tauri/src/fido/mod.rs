@@ -222,7 +222,7 @@ pub fn read_device_details() -> Result<FullDeviceStatus, PFError> {
 		config,
 		secure_boot: false,
 		secure_lock: false,
-		method: DeviceMethod::FIDO,
+		method: DeviceMethod::Fido,
 	})
 }
 
@@ -394,7 +394,7 @@ pub fn write_config(config: AppConfigInput, pin: Option<String>) -> Result<Strin
 
 	// 1. Obtain PIN token using the library handle
 	let pin_token = {
-		let device = get_device().map_err(|e| PFError::Device(e))?;
+		let device = get_device().map_err(PFError::Device)?;
 
 		// Try to obtain a token with AuthenticatorConfiguration permission (CTAP 2.1)
 		match device
