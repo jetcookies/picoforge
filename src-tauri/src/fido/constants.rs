@@ -154,7 +154,7 @@ pub enum VendorConfigCommand {
 }
 
 impl VendorConfigCommand {
-	pub fn to_u64(&self) -> u64 {
+	pub fn to_u64(self) -> u64 {
 		match self {
 			Self::AuthEncryptionEnable => 0x03e43f56b34285e2,
 			Self::AuthEncryptionDisable => 0x1831a40f04a25ed9,

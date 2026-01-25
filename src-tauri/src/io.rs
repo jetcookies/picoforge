@@ -18,7 +18,7 @@ pub fn write_config(
 	method: DeviceMethod,
 	pin: Option<String>,
 ) -> Result<String, PFError> {
-	if method == DeviceMethod::FIDO {
+	if method == DeviceMethod::Fido {
 		fido::write_config(config, pin)
 	} else {
 		rescue::write_config(config)

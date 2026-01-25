@@ -60,7 +60,8 @@ pub struct FullDeviceStatus {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub enum DeviceMethod {
-	FIDO,
+	#[serde(rename = "FIDO")]
+	Fido,
 	Rescue,
 }
 
