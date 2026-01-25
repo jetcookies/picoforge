@@ -13,16 +13,16 @@
 
 ### Getting Started
 *   **[Installation](Installation)** – Detailed setup instructions for all supported operating systems (Windows, macOS, Linux).
-*   **[First Setup](First-Setup)** – How to initialize and personalize your new Pico-Key.
+<!-- *   **[First Setup](First-Setup)** – How to initialize and personalize your new Pico-Key. -->
 
 ### User Guide
-*   **[Device Management](Device-Management)** – configuring PINs, resetting the device, and firmware updates.
+<!-- *   **[Device Management](Device-Management)** – configuring PINs, resetting the device, and firmware updates. -->
 *   **[Troubleshooting](Troubleshooting)** – Solutions for common connection and detection issues.
-*   **[FAQ](FAQ)** – Frequently asked questions about PicoForge and Pico-Key.
+<!-- *   **[FAQ](FAQ)** – Frequently asked questions about PicoForge and Pico-Key. -->
 
 ### Development
 *   **[Building from Source](Building)** – Instructions for compiling PicoForge locally.
-*   **[Contributing](Contributing)** – Guidelines for reporting bugs and submitting code changes.
+<!-- *   **[Contributing](Contributing)** – Guidelines for reporting bugs and submitting code changes. -->
 
 ---
 *Return to the [LibreKeys PicoForge Repository](https://github.com/librekeys/picoforge)*

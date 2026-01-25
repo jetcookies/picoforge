@@ -1,5 +1,3 @@
-# Troubleshooting
-
 ## 1. My key is not detected by picoforge or picoforge displays a device status of "online - fido" and there are some settings that I cannot configure.
 
 The pico-fido firmware uses by default "generic" USB Vendor ID (VID) and Product ID (PID) that are not not registered IDs and so not known by pcsc-lite. 
