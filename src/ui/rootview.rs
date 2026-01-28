@@ -32,6 +32,7 @@ pub struct ApplicationRoot {
     device_status: Option<FullDeviceStatus>,
     device_loading: bool,
     device_error: Option<String>,
+    sidebar_width: Pixels,
 }
 
 impl ApplicationRoot {
@@ -42,6 +43,7 @@ impl ApplicationRoot {
             device_status: None,
             device_loading: false,
             device_error: None,
+            sidebar_width: px(255.),
         };
         this.refresh_device_status(cx);
         this
@@ -62,11 +64,19 @@ impl ApplicationRoot {
 }
 
 impl Render for ApplicationRoot {
-    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let device_status = self.device_status.clone();
 
         let device_error = self.device_error.clone();
         let collapsed = self.collapsed;
+
+        let target_width = if self.collapsed { px(48.) } else { px(255.) };
+        if (self.sidebar_width - target_width).abs() > px(0.1) {
+            self.sidebar_width = self.sidebar_width + (target_width - self.sidebar_width) * 0.2;
+            window.request_animation_frame();
+        } else {
+            self.sidebar_width = target_width;
+        }
 
         h_flex()
             .size_full()
@@ -74,7 +84,7 @@ impl Render for ApplicationRoot {
                 v_flex()
                     .h_full()
                     .bg(rgb(colors::zinc::ZINC900))
-                    .w(if self.collapsed { px(48.) } else { px(255.) })
+                    .w(self.sidebar_width)
                     .child({
                         let header = h_flex()
                             .w_full()
@@ -84,22 +94,43 @@ impl Render for ApplicationRoot {
                             .border_color(cx.theme().sidebar_border)
                             .pt_4();
 
-                        let header = if self.collapsed {
-                            header.justify_center()
+                        let current_width = self.sidebar_width;
+                        let t = ((current_width - px(48.)) / (px(255.) - px(48.))).clamp(0.0, 1.0);
+
+                        // Animate padding-left from 8px (collapsed) to 16px (expanded)
+                        let padding_left = px(8.) + (px(16.) - px(8.)) * t;
+
+                        let header = header.justify_start().pl(padding_left);
+
+                        // Icon Animation: Stays 48px until width drops below 120px, then shrinks to 32px
+                        // Range: [48px ... 120px] -> [32px ... 48px]
+                        let width_icon_start = px(120.);
+                        let t_icon = ((current_width - px(48.)) / (width_icon_start - px(48.)))
+                            .clamp(0.0, 1.0);
+                        let icon_size = px(32.) + (px(48.) - px(32.)) * t_icon;
+
+                        // Text Animation: Fades out first, before icon starts shrinking
+                        // Range: [200px ... 255px] -> [0.0 ... 1.0]
+                        let width_text_start = px(200.);
+                        let text_opacity: f32 = if current_width > width_text_start {
+                            ((current_width - width_text_start) / (px(255.) - width_text_start))
+                                .clamp(0.0, 1.0)
                         } else {
-                            header.justify_start().pl_4()
+                            0.0
                         };
 
                         header
                             .child(
                                 img("appIcons/in.suyogtandel.picoforge.svg")
-                                    .w(if self.collapsed { px(32.) } else { px(48.) })
-                                    .h(if self.collapsed { px(32.) } else { px(48.) }),
+                                    .w(icon_size)
+                                    .h(icon_size)
+                                    .flex_shrink_0(),
                             )
-                            .children(if !self.collapsed {
+                            .children(if self.sidebar_width > px(60.) {
                                 Some(
                                     div()
                                         .ml_2()
+                                        .opacity(text_opacity)
                                         .child("PicoForge")
                                         .font_weight(gpui::FontWeight::EXTRA_BOLD)
                                         .text_color(rgb(colors::zinc::ZINC100)),
@@ -110,8 +141,8 @@ impl Render for ApplicationRoot {
                     })
                     .child(
                         Sidebar::new(Side::Left)
-                            .collapsed(self.collapsed)
-                            .collapsible(true)
+                            .collapsed(self.sidebar_width < px(120.))
+                            .collapsible(false)
                             .h_auto()
                             .w_full()
                             .flex_grow()
