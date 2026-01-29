@@ -151,9 +151,15 @@ impl Render for ApplicationRoot {
                                     ActiveView::Passkeys => {
                                         PasskeysView::build(cx.theme()).into_any_element()
                                     }
-                                    ActiveView::Configuration => {
-                                        cx.new(|cx| ConfigView::new(window, cx)).into_any_element()
-                                    }
+                                    ActiveView::Configuration => cx
+                                        .new(|cx| {
+                                            ConfigView::new(
+                                                window,
+                                                cx,
+                                                self.state.device_status.clone(),
+                                            )
+                                        })
+                                        .into_any_element(),
                                     ActiveView::Security => {
                                         SecurityView::build(cx).into_any_element()
                                     }
