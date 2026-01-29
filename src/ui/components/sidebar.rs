@@ -1,5 +1,6 @@
-use crate::device::types::{DeviceMethod, FullDeviceStatus};
+use crate::device::types::DeviceMethod;
 use crate::ui::colors;
+use crate::ui::ui_types::{ActiveView, GlobalDeviceState};
 use gpui::*;
 use gpui_component::{
     ActiveTheme, Icon, IconName, Side,
@@ -10,22 +11,11 @@ use gpui_component::{
 };
 use std::rc::Rc;
 
-#[derive(Clone, Copy, PartialEq)]
-pub enum ActiveView {
-    Home,
-    Passkeys,
-    Configuration,
-    Security,
-    Logs,
-    About,
-}
-
 pub struct AppSidebar<V: 'static> {
     active_view: ActiveView,
     width: Pixels,
     collapsed: bool,
-    device_status: Option<FullDeviceStatus>,
-    device_error: Option<String>,
+    state: GlobalDeviceState,
     on_select: Option<Rc<dyn Fn(&mut V, ActiveView, &mut Window, &mut Context<V>)>>,
     on_refresh: Option<Rc<dyn Fn(&mut V, &mut Window, &mut Context<V>)>>,
 }
@@ -35,15 +25,13 @@ impl<V: 'static> AppSidebar<V> {
         active_view: ActiveView,
         width: Pixels,
         collapsed: bool,
-        device_status: Option<FullDeviceStatus>,
-        device_error: Option<String>,
+        state: GlobalDeviceState,
     ) -> Self {
         Self {
             active_view,
             width,
             collapsed,
-            device_status,
-            device_error,
+            state,
             on_select: None,
             on_refresh: None,
         }
@@ -68,8 +56,7 @@ impl<V: 'static> AppSidebar<V> {
     pub fn render(self, cx: &mut Context<V>) -> impl IntoElement {
         let width = self.width;
         let collapsed = self.collapsed;
-        let device_status = self.device_status.clone();
-        let device_error = self.device_error.clone();
+        let state = self.state.clone();
 
         let border_color = cx.theme().sidebar_border;
         let muted_foreground = cx.theme().muted_foreground;
@@ -206,13 +193,13 @@ impl<V: 'static> AppSidebar<V> {
                                     })),
                             )
                             .child(div().w(px(8.)).h(px(8.)).rounded_full().bg(
-                                if let Some(status) = &device_status {
+                                if let Some(status) = &state.device_status {
                                     if status.method == DeviceMethod::Fido {
                                         rgb(0xf59e0b)
                                     } else {
                                         rgb(0x22c55e)
                                     }
-                                } else if device_error.is_some() {
+                                } else if state.error.is_some() {
                                     rgb(0xf59e0b)
                                 } else {
                                     rgb(0xef4444)
@@ -235,13 +222,13 @@ impl<V: 'static> AppSidebar<V> {
                                     )
                                     .child({
                                         let (text, color_bg, color_text) =
-                                            if let Some(status) = &device_status {
+                                            if let Some(status) = &state.device_status {
                                                 if status.method == DeviceMethod::Fido {
                                                     ("Online - Fido", rgb(0xf59e0b), rgb(0xffffff))
                                                 } else {
                                                     ("Online", rgb(0x16a34a), rgb(0xffffff))
                                                 }
-                                            } else if device_error.is_some() {
+                                            } else if state.error.is_some() {
                                                 ("Error", rgb(0xd97706), rgb(0xffffff))
                                             } else {
                                                 ("Offline", rgb(0xef4444), rgb(0xffffff))

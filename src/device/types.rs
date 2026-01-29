@@ -67,7 +67,7 @@ pub enum DeviceMethod {
 
 // Fido stuff:
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct FidoDeviceInfo {
     pub versions: Vec<String>,

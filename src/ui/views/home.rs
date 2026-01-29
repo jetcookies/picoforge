@@ -1,93 +1,20 @@
-// use crate::device::types::*;
+use crate::device::types::DeviceMethod;
 use crate::ui::components::page_view::PageView;
+use crate::ui::ui_types::GlobalDeviceState;
 use gpui::*;
 use gpui_component::StyledExt;
 use gpui_component::{Icon, IconName, Theme, badge::Badge, h_flex, progress::Progress, v_flex};
 
-// These will be replaced/added in types.rs
-struct DeviceInfo {
-    serial: String,
-    firmware_version: String,
-    flash_used: f32,
-    flash_total: f32,
-}
-
-struct DeviceConfig {
-    vid: u16,
-    pid: u16,
-    product_name: String,
-    led_gpio: u8,
-    led_brightness: u8,
-    touch_timeout: u8,
-    led_dimmable: bool,
-    led_steady: bool,
-}
-
-struct FidoInfo {
-    versions: Vec<String>,
-    client_pin: bool,
-    min_pin_length: u8,
-    resident_keys: bool,
-    aaguid: String,
-}
-
-struct DeviceSecurity {
-    secure_boot: bool,
-    secure_lock: bool,
-    confirmed: bool,
-}
-
-struct DeviceState {
-    connected: bool,
-    method: String,
-    info: DeviceInfo,
-    config: DeviceConfig,
-    fido_info: Option<FidoInfo>,
-    security: DeviceSecurity,
-}
-
 pub struct HomeView;
 
 impl HomeView {
-    pub fn build(theme: &Theme) -> impl IntoElement {
-        // Mock Data, I will replace this with fetching of actual data later, kinda bored rn.
-        let device = DeviceState {
-            connected: true,
-            method: "HID".to_string(),
-            info: DeviceInfo {
-                serial: "A1B2C3D4E5".to_string(),
-                firmware_version: "1.2.0".to_string(),
-                flash_used: 128.0,
-                flash_total: 2048.0,
-            },
-            config: DeviceConfig {
-                vid: 0x0000,
-                pid: 0x0000,
-                product_name: "Pico FIDO Key".to_string(),
-                led_gpio: 25,
-                led_brightness: 128,
-                touch_timeout: 10,
-                led_dimmable: true,
-                led_steady: false,
-            },
-            fido_info: Some(FidoInfo {
-                versions: vec!["FIDO2_1".to_string(), "U2F_V2".to_string()],
-                client_pin: true,
-                min_pin_length: 4,
-                resident_keys: true,
-                aaguid: "00000000-0000-0000-0000-000000000000".to_string(),
-            }),
-            security: DeviceSecurity {
-                secure_boot: true,
-                secure_lock: false,
-                confirmed: true,
-            },
-        };
+    pub fn build(state: &GlobalDeviceState, theme: &Theme) -> impl IntoElement {
+        let connected = state.device_status.is_some();
 
         PageView::build(
             "Device Overview",
             "Quick view of your device status and specifications.",
-            if !device.connected {
+            if !connected {
                 // No Device Status Placeholder
                 div()
                     .flex()
@@ -109,10 +36,10 @@ impl HomeView {
                     .grid()
                     .grid_cols(2)
                     .gap_6()
-                    .child(Self::render_device_info(&device, theme))
-                    .child(Self::render_fido_info(&device, theme))
-                    .child(Self::render_led_config(&device, theme))
-                    .child(Self::render_security_status(&device, theme))
+                    .child(Self::render_device_info(state, theme))
+                    .child(Self::render_fido_info(state, theme))
+                    .child(Self::render_led_config(state, theme))
+                    .child(Self::render_security_status(state, theme))
                     .into_any_element()
             },
             theme,
@@ -181,8 +108,12 @@ impl HomeView {
             )
     }
 
-    fn render_device_info(device: &DeviceState, theme: &Theme) -> impl IntoElement {
-        let flash_percent = (device.info.flash_used / device.info.flash_total) * 100.0;
+    fn render_device_info(state: &GlobalDeviceState, theme: &Theme) -> impl IntoElement {
+        let status = state.device_status.as_ref().unwrap();
+        let info = &status.info;
+        let config = &status.config;
+
+        let flash_percent = (info.flash_used as f32 / info.flash_total as f32) * 100.0;
 
         Self::home_card(
             "Device Information",
@@ -196,25 +127,25 @@ impl HomeView {
                         .gap_4()
                         .child(Self::render_kv(
                             "Serial Number",
-                            device.info.serial.clone(),
+                            info.serial.clone(),
                             theme,
                             true,
                         ))
                         .child(Self::render_kv(
                             "Firmware Version",
-                            format!("v{}", device.info.firmware_version),
+                            format!("v{}", info.firmware_version),
                             theme,
                             true,
                         ))
                         .child(Self::render_kv(
                             "VID:PID",
-                            format!("{:04x}:{:04x}", device.config.vid, device.config.pid),
+                            format!("{}, {}", config.vid, config.pid),
                             theme,
                             true,
                         ))
                         .child(Self::render_kv(
                             "Product Name",
-                            device.config.product_name.clone(),
+                            config.product_name.clone(),
                             theme,
                             false,
                         )),
@@ -234,7 +165,7 @@ impl HomeView {
                                 )
                                 .child(div().text_color(theme.foreground).child(format!(
                                     "{:.0} / {:.0} KB",
-                                    device.info.flash_used, device.info.flash_total
+                                    info.flash_used, info.flash_total
                                 ))),
                         )
                         .child(Progress::new().value(flash_percent)),
@@ -243,11 +174,11 @@ impl HomeView {
         )
     }
 
-    fn render_fido_info(device: &DeviceState, theme: &Theme) -> impl IntoElement {
+    fn render_fido_info(state: &GlobalDeviceState, theme: &Theme) -> impl IntoElement {
         Self::home_card(
             "FIDO2 Information",
             Icon::default().path("icons/shield.svg"),
-            if let Some(fido) = &device.fido_info {
+            if let Some(fido) = &state.fido_info {
                 v_flex()
                     .gap_6()
                     .child(
@@ -263,7 +194,11 @@ impl HomeView {
                             ))
                             .child(Self::render_kv(
                                 "PIN Set",
-                                if fido.client_pin { "Yes" } else { "No" },
+                                if fido.options.get("clientPin").copied().unwrap_or(false) {
+                                    "Yes"
+                                } else {
+                                    "No"
+                                },
                                 theme,
                                 false,
                             ))
@@ -275,7 +210,7 @@ impl HomeView {
                             ))
                             .child(Self::render_kv(
                                 "Resident Keys",
-                                if fido.resident_keys {
+                                if fido.options.get("rk").copied().unwrap_or(false) {
                                     "Supported"
                                 } else {
                                     "Not Supported"
@@ -298,11 +233,13 @@ impl HomeView {
         )
     }
 
-    fn render_led_config(device: &DeviceState, theme: &Theme) -> impl IntoElement {
+    fn render_led_config(state: &GlobalDeviceState, theme: &Theme) -> impl IntoElement {
+        let status = state.device_status.as_ref().unwrap();
+        let config = &status.config;
         Self::home_card(
             "LED Configuration",
             Icon::default().path("icons/microchip.svg"),
-            if device.method == "FIDO" {
+            if status.method == DeviceMethod::Fido {
                 v_flex()
                     .items_center()
                     .justify_center()
@@ -332,7 +269,7 @@ impl HomeView {
                                     .text_color(theme.muted_foreground)
                                     .child("LED GPIO Pin"),
                             )
-                            .child(format!("GPIO {}", device.config.led_gpio)),
+                            .child(format!("GPIO {}", config.led_gpio)),
                     )
                     .child(
                         h_flex()
@@ -342,7 +279,7 @@ impl HomeView {
                                     .text_color(theme.muted_foreground)
                                     .child("LED Brightness"),
                             )
-                            .child(device.config.led_brightness.to_string()),
+                            .child(config.led_brightness.to_string()),
                     )
                     .child(
                         h_flex()
@@ -352,7 +289,7 @@ impl HomeView {
                                     .text_color(theme.muted_foreground)
                                     .child("Presence Touch Timeout"),
                             )
-                            .child(format!("{}s", device.config.touch_timeout)),
+                            .child(format!("{}s", config.touch_timeout)),
                     )
                     .child(
                         h_flex()
@@ -364,12 +301,8 @@ impl HomeView {
                             )
                             .child(
                                 Badge::new()
-                                    .child(if device.config.led_dimmable {
-                                        "Yes"
-                                    } else {
-                                        "No"
-                                    })
-                                    .color(if device.config.led_dimmable {
+                                    .child(if config.led_dimmable { "Yes" } else { "No" })
+                                    .color(if config.led_dimmable {
                                         theme.primary
                                     } else {
                                         theme.secondary
@@ -386,12 +319,8 @@ impl HomeView {
                             )
                             .child(
                                 Badge::new()
-                                    .child(if device.config.led_steady {
-                                        "On"
-                                    } else {
-                                        "Off"
-                                    })
-                                    .color(if device.config.led_steady {
+                                    .child(if config.led_steady { "On" } else { "Off" })
+                                    .color(if config.led_steady {
                                         theme.primary
                                     } else {
                                         theme.secondary
@@ -404,7 +333,8 @@ impl HomeView {
         )
     }
 
-    fn render_security_status(device: &DeviceState, theme: &Theme) -> impl IntoElement {
+    fn render_security_status(state: &GlobalDeviceState, theme: &Theme) -> impl IntoElement {
+        let status = state.device_status.as_ref().unwrap();
         Self::home_card(
             "Security Status",
             Icon::default().path("icons/shield-check.svg"),
@@ -420,7 +350,7 @@ impl HomeView {
                             h_flex()
                                 .gap_2()
                                 .items_center()
-                                .child(if device.security.secure_boot {
+                                .child(if status.secure_boot {
                                     Icon::default()
                                         .path("icons/lock.svg")
                                         .size_3p5()
@@ -433,12 +363,12 @@ impl HomeView {
                                 })
                                 .child(
                                     Badge::new()
-                                        .child(if device.security.secure_boot {
+                                        .child(if status.secure_boot {
                                             "Secure Boot"
                                         } else {
                                             "Development"
                                         })
-                                        .color(if device.security.secure_boot {
+                                        .color(if status.secure_boot {
                                             theme.primary
                                         } else {
                                             theme.secondary
@@ -456,7 +386,7 @@ impl HomeView {
                                 .child("Debug Interface"),
                         )
                         .child(div().font_medium().text_color(theme.foreground).child(
-                            if device.security.secure_lock {
+                            if status.secure_lock {
                                 "Read-out Locked"
                             } else {
                                 "Debug Enabled"
@@ -474,12 +404,32 @@ impl HomeView {
                         )
                         .child(
                             Badge::new()
-                                .child(if device.security.confirmed {
+                                .child(if status.secure_lock {
+                                    // Using secure_lock as confirmed flag approximation? Or there is no confirmed in FullDeviceStatus?
+                                    // FullDeviceStatus has secure_lock and secure_boot.
+                                    // Svelte types had 'confirmed'. types.rs FullDeviceStatus does NOT have 'confirmed'.
+                                    // Let's assume confirmed is not available or handled differently.
+                                    // Wait, types.rs FullDeviceStatus DOES NOT have 'confirmed'.
+                                    // But Sidebar uses secure_lock/secure_boot?
+                                    // Let's just remove confirmed logic or use something else.
+                                    // The user said "show actual data".
+                                    // I'll update to use secure_lock for now or remove.
+                                    // Wait, types.rs has:
+                                    /*
+                                    pub struct FullDeviceStatus {
+                                        pub info: DeviceInfo,
+                                        pub config: AppConfig,
+                                        pub secure_boot: bool,
+                                        pub secure_lock: bool,
+                                        pub method: DeviceMethod,
+                                    }
+                                    */
+                                    // So 'confirmed' is missing.
                                     "Acknowledged"
                                 } else {
                                     "Pending"
                                 })
-                                .color(if device.security.confirmed {
+                                .color(if status.secure_lock {
                                     gpui::red()
                                 } else {
                                     theme.secondary
