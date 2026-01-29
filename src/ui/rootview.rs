@@ -1,5 +1,5 @@
 use crate::device::io;
-use crate::device::types::{DeviceMethod, FullDeviceStatus};
+use crate::ui::components::button::PFIconButton;
 use crate::ui::components::sidebar::AppSidebar;
 use crate::ui::ui_types::{ActiveView, GlobalDeviceState};
 use crate::ui::{
@@ -9,10 +9,10 @@ use crate::ui::{
         passkeys::PasskeysView, security::SecurityView,
     },
 };
-use gpui::WeakEntity;
+use gpui::prelude::*;
 use gpui::*;
 use gpui_component::{
-    ActiveTheme, IconName, TitleBar,
+    ActiveTheme, Icon, IconName, TitleBar,
     button::{Button, ButtonVariants},
     h_flex,
     scroll::ScrollableElement,
@@ -25,16 +25,29 @@ pub struct ApplicationRoot {
     state: GlobalDeviceState,
     device_loading: bool,
     sidebar_width: Pixels,
+    refresh_button: Entity<PFIconButton>,
 }
 
 impl ApplicationRoot {
     pub fn new(cx: &mut Context<Self>) -> Self {
+        let refresh_button = cx
+            .new(|_cx| PFIconButton::new(Icon::default().path("icons/refresh-cw.svg"), "Refresh"));
+
+        cx.subscribe(
+            &refresh_button,
+            |this, _, _: &crate::ui::components::button::Clicked, cx| {
+                this.refresh_device_status(cx);
+            },
+        )
+        .detach();
+
         let mut this = Self {
             active_view: ActiveView::Home,
             collapsed: false,
             state: GlobalDeviceState::new(),
             device_loading: false,
             sidebar_width: px(255.),
+            refresh_button,
         };
         this.refresh_device_status(cx);
         this
@@ -49,14 +62,6 @@ impl ApplicationRoot {
         self.state.error = None;
         cx.notify();
 
-        // Perform synchronous IO for now as requested/implied by structure suitable for this environment
-        // ideal would be spawning a task but let's stick to simple first if IO is not blocking main thread too badly or if we accept it.
-        // Actually, IO should be async or in background.
-        // But since I cannot easily spawn async here without an executor passed or using gpui's spawn, let's try direct call.
-        // If the user said "run the refresh command", and it's rust, IO blocks.
-        // Let's use cx.spawn to run it in background.
-
-        // Synchronous implementation to avoid GPUI async type issues
         match io::read_device_details() {
             Ok(status) => {
                 self.state.device_status = Some(status);
@@ -107,9 +112,7 @@ impl Render for ApplicationRoot {
                     .on_select(|this: &mut Self, view, _, _| {
                         this.active_view = view;
                     })
-                    .on_refresh(|this: &mut Self, _, cx| {
-                        this.refresh_device_status(cx);
-                    })
+                    .with_refresh_btn(self.refresh_button.clone())
                     .render(cx),
                 )
                 .child(

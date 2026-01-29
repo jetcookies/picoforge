@@ -2,13 +2,7 @@ use crate::device::types::DeviceMethod;
 use crate::ui::colors;
 use crate::ui::ui_types::{ActiveView, GlobalDeviceState};
 use gpui::*;
-use gpui_component::{
-    ActiveTheme, Icon, IconName, Side,
-    button::{Button, ButtonCustomVariant, ButtonVariants},
-    h_flex,
-    sidebar::*,
-    v_flex,
-};
+use gpui_component::{ActiveTheme, Icon, IconName, Side, h_flex, sidebar::*, v_flex};
 use std::rc::Rc;
 
 pub struct AppSidebar<V: 'static> {
@@ -17,7 +11,7 @@ pub struct AppSidebar<V: 'static> {
     collapsed: bool,
     state: GlobalDeviceState,
     on_select: Option<Rc<dyn Fn(&mut V, ActiveView, &mut Window, &mut Context<V>)>>,
-    on_refresh: Option<Rc<dyn Fn(&mut V, &mut Window, &mut Context<V>)>>,
+    refresh_btn: Option<AnyElement>,
 }
 
 impl<V: 'static> AppSidebar<V> {
@@ -33,7 +27,7 @@ impl<V: 'static> AppSidebar<V> {
             collapsed,
             state,
             on_select: None,
-            on_refresh: None,
+            refresh_btn: None,
         }
     }
 
@@ -45,11 +39,8 @@ impl<V: 'static> AppSidebar<V> {
         self
     }
 
-    pub fn on_refresh(
-        mut self,
-        handler: impl Fn(&mut V, &mut Window, &mut Context<V>) + 'static,
-    ) -> Self {
-        self.on_refresh = Some(Rc::new(handler));
+    pub fn with_refresh_btn(mut self, btn: impl IntoElement) -> Self {
+        self.refresh_btn = Some(btn.into_any_element());
         self
     }
 
@@ -77,7 +68,6 @@ impl<V: 'static> AppSidebar<V> {
                 let current_width = width;
                 let t = ((current_width - px(48.)) / (px(255.) - px(48.))).clamp(0.0, 1.0);
 
-                // Animate padding-left from 8px (collapsed) to 16px (expanded)
                 let padding_left = px(8.) + (px(16.) - px(8.)) * t;
 
                 let header = header.justify_start().pl(padding_left);
@@ -179,19 +169,7 @@ impl<V: 'static> AppSidebar<V> {
                             .items_center()
                             .justify_center()
                             .gap_2()
-                            .child(
-                                Button::new("refresh-btn-collapsed")
-                                    .ghost()
-                                    .child(Icon::default().path("icons/refresh-cw.svg"))
-                                    .on_click(cx.listener({
-                                        let on_refresh = self.on_refresh.clone();
-                                        move |view, _, window, cx| {
-                                            if let Some(f) = &on_refresh {
-                                                f(view, window, cx)
-                                            }
-                                        }
-                                    })),
-                            )
+                            .children(self.refresh_btn)
                             .child(div().w(px(8.)).h(px(8.)).rounded_full().bg(
                                 if let Some(status) = &state.device_status {
                                     if status.method == DeviceMethod::Fido {
@@ -250,31 +228,7 @@ impl<V: 'static> AppSidebar<V> {
                                             )
                                     }),
                             )
-                            .child(
-                                Button::new("refresh-btn")
-                                    .custom(
-                                        ButtonCustomVariant::new(cx)
-                                            .color(rgb(colors::zinc::ZINC800).into())
-                                            .hover(rgb(colors::zinc::ZINC600).into())
-                                            .active(rgb(colors::zinc::ZINC700).into()),
-                                    )
-                                    .w_full()
-                                    .child(
-                                        h_flex()
-                                            .gap_2()
-                                            .justify_center()
-                                            .child(Icon::default().path("icons/refresh-cw.svg"))
-                                            .child("Refresh"),
-                                    )
-                                    .on_click(cx.listener({
-                                        let on_refresh = self.on_refresh.clone();
-                                        move |view, _, window, cx| {
-                                            if let Some(f) = &on_refresh {
-                                                f(view, window, cx)
-                                            }
-                                        }
-                                    })),
-                            )
+                            .children(self.refresh_btn)
                     }),
             )
     }

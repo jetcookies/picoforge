@@ -70,7 +70,7 @@ impl AboutView {
                                                     div()
                                                         .font_medium()
                                                         .text_color(theme.foreground)
-                                                        .child("Suyog Tandel"),
+                                                        .child("Suyog Tandel, Fabrice Bellamy"),
                                                 ),
                                         )
                                         .child(

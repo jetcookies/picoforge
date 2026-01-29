@@ -405,26 +405,6 @@ impl HomeView {
                         .child(
                             Badge::new()
                                 .child(if status.secure_lock {
-                                    // Using secure_lock as confirmed flag approximation? Or there is no confirmed in FullDeviceStatus?
-                                    // FullDeviceStatus has secure_lock and secure_boot.
-                                    // Svelte types had 'confirmed'. types.rs FullDeviceStatus does NOT have 'confirmed'.
-                                    // Let's assume confirmed is not available or handled differently.
-                                    // Wait, types.rs FullDeviceStatus DOES NOT have 'confirmed'.
-                                    // But Sidebar uses secure_lock/secure_boot?
-                                    // Let's just remove confirmed logic or use something else.
-                                    // The user said "show actual data".
-                                    // I'll update to use secure_lock for now or remove.
-                                    // Wait, types.rs has:
-                                    /*
-                                    pub struct FullDeviceStatus {
-                                        pub info: DeviceInfo,
-                                        pub config: AppConfig,
-                                        pub secure_boot: bool,
-                                        pub secure_lock: bool,
-                                        pub method: DeviceMethod,
-                                    }
-                                    */
-                                    // So 'confirmed' is missing.
                                     "Acknowledged"
                                 } else {
                                     "Pending"
