@@ -115,6 +115,14 @@ impl Render for ApplicationRoot {
                         this.active_view = view;
                     })
                     .with_refresh_btn(self.refresh_button.clone())
+                    .with_refresh_btn_collapsed(
+                        Button::new("refresh-btn-collapsed")
+                            .ghost()
+                            .child(Icon::default().path("icons/refresh-cw.svg"))
+                            .on_click(cx.listener(|this, _, _, cx| {
+                                this.refresh_device_status(cx);
+                            })),
+                    )
                     .render(cx),
                 )
                 .child(

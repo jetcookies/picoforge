@@ -12,6 +12,7 @@ pub struct AppSidebar<V: 'static> {
     state: GlobalDeviceState,
     on_select: Option<Rc<dyn Fn(&mut V, ActiveView, &mut Window, &mut Context<V>)>>,
     refresh_btn: Option<AnyElement>,
+    refresh_btn_collapsed: Option<AnyElement>,
 }
 
 impl<V: 'static> AppSidebar<V> {
@@ -28,6 +29,7 @@ impl<V: 'static> AppSidebar<V> {
             state,
             on_select: None,
             refresh_btn: None,
+            refresh_btn_collapsed: None,
         }
     }
 
@@ -41,6 +43,11 @@ impl<V: 'static> AppSidebar<V> {
 
     pub fn with_refresh_btn(mut self, btn: impl IntoElement) -> Self {
         self.refresh_btn = Some(btn.into_any_element());
+        self
+    }
+
+    pub fn with_refresh_btn_collapsed(mut self, btn: impl IntoElement) -> Self {
+        self.refresh_btn_collapsed = Some(btn.into_any_element());
         self
     }
 
@@ -169,7 +176,7 @@ impl<V: 'static> AppSidebar<V> {
                             .items_center()
                             .justify_center()
                             .gap_2()
-                            .children(self.refresh_btn)
+                            .children(self.refresh_btn_collapsed)
                             .child(div().w(px(8.)).h(px(8.)).rounded_full().bg(
                                 if let Some(status) = &state.device_status {
                                     if status.method == DeviceMethod::Fido {
