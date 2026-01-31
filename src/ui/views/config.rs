@@ -1,8 +1,10 @@
 use crate::device::io;
 use crate::device::types::{AppConfigInput, FullDeviceStatus};
+use crate::ui::colors;
 use crate::ui::components::{card::Card, page_view::PageView};
 use crate::ui::ui_types::{LedDriverType, UsbIdentityPreset};
 use gpui::*;
+use gpui_component::button::{ButtonCustomVariant, ButtonVariants};
 use gpui_component::{
     ActiveTheme, Disableable, Icon, Theme,
     button::Button,
@@ -400,7 +402,7 @@ impl ConfigView {
                 v_flex()
                     .gap_2()
                     .child("Vendor Preset")
-                    .child(Select::new(&self.vendor_select).w_full()),
+                    .child(Select::new(&self.vendor_select).bg(rgb(0x222225)).w_full()),
             )
             .child(
                 div()
@@ -427,7 +429,7 @@ impl ConfigView {
                 v_flex()
                     .gap_2()
                     .child("Product Name")
-                    .child(Input::new(&self.product_name_input)),
+                    .child(Input::new(&self.product_name_input).bg(rgb(0x222225))),
             );
 
         Card::new()
@@ -458,13 +460,14 @@ impl ConfigView {
                 v_flex()
                     .gap_2()
                     .child("LED GPIO Pin")
-                    .child(Input::new(&self.led_gpio_input)),
+                    .child(Input::new(&self.led_gpio_input).bg(rgb(0x222225))),
             )
             .child(
-                v_flex()
-                    .gap_2()
-                    .child("LED Driver")
-                    .child(Select::new(&self.led_driver_select).w_full()),
+                v_flex().gap_2().child("LED Driver").child(
+                    Select::new(&self.led_driver_select)
+                        .w_full()
+                        .bg(rgb(0x222225)),
+                ),
             )
             .child(div().h_px().bg(theme.border))
             .child(
@@ -530,7 +533,7 @@ impl ConfigView {
             v_flex()
                 .gap_2()
                 .child("Touch Timeout (seconds)")
-                .child(Input::new(&self.touch_timeout_input)),
+                .child(Input::new(&self.touch_timeout_input).bg(rgb(0x222225))),
         );
 
         Card::new()
@@ -652,6 +655,13 @@ impl Render for ConfigView {
                             .icon(Icon::default().path("icons/save.svg"))
                             .child("Apply Changes")
                             .disabled(self.loading)
+                            .custom(
+                                ButtonCustomVariant::new(cx)
+                                    .color(rgb(0xe3e3e6).into())
+                                    .hover(rgb(0xcfcfd1).into())
+                                    .active(rgb(0xe3e3e6).into())
+                                    .foreground(rgb(0x4b4b4e).into()),
+                            )
                             .on_click(cx.listener(|this, _, window, cx| {
                                 this.apply_changes(window, cx);
                             })),

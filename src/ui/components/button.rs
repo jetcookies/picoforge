@@ -1,3 +1,5 @@
+// TODO: convert this from an entity to a stateless button component.
+
 use crate::ui::colors;
 use gpui::prelude::*;
 use gpui::*;
