@@ -1,12 +1,31 @@
 use crate::device::io;
 use crate::device::types::{FidoDeviceInfo, FullDeviceStatus, StoredCredential};
-use crate::ui::components::{card::Card, page_view::PageView, button::{PFButton, PFIconButton}};
-use gpui::*;
-use gpui_component::button::{Button, ButtonVariants};
-use gpui_component::{
-    ActiveTheme, Disableable, Icon, Sizable, StyledExt, Theme, WindowExt, badge::Badge, h_flex,
-    input::Input, input::InputState, v_flex,
+use crate::ui::components::{
+    button::{PFButton, PFIconButton},
+    card::Card,
+    page_view::PageView,
 };
+use gpui::*;
+use gpui_component::button::{Button, ButtonVariant, ButtonVariants};
+use gpui_component::{
+    ActiveTheme, Icon, Sizable, StyledExt, Theme, WindowExt,
+    badge::Badge,
+    h_flex,
+    input::{Input, InputState},
+    slider::{Slider, SliderState},
+    v_flex,
+};
+
+struct SliderLabel {
+    slider: Entity<SliderState>,
+}
+
+impl Render for SliderLabel {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let val = self.slider.read(cx).value().start() as u8;
+        format!("Minimum PIN Length ({})", val)
+    }
+}
 
 pub struct PasskeysView {
     device_status: Option<FullDeviceStatus>,
@@ -17,17 +36,6 @@ pub struct PasskeysView {
     loading: bool,
 
     _task: Option<Task<()>>,
-    active_modal: Option<ActiveModal>,
-}
-
-pub enum ActiveModal {
-    Unlock(Entity<InputState>),
-    Delete {
-        cred: StoredCredential,
-        pin: String,
-    },
-    ChangePin,
-    MinPin,
 }
 
 pub enum PasskeysEvent {
@@ -52,7 +60,6 @@ impl PasskeysView {
             cached_pin: None,
             loading: false,
             _task: None,
-            active_modal: None,
         }
     }
 
@@ -79,7 +86,7 @@ impl PasskeysView {
 
         let entity = cx.entity().downgrade();
 
-        cx.spawn(async move |_, cx| {
+        self._task = Some(cx.spawn(async move |_, cx| {
             let result = io::get_credentials(pin.clone());
 
             let _ = entity.update(cx, |this, cx| {
@@ -98,8 +105,7 @@ impl PasskeysView {
                 }
                 cx.notify();
             });
-        })
-        .detach();
+        }));
     }
 
     fn lock_storage(&mut self, cx: &mut Context<Self>) {
@@ -109,12 +115,7 @@ impl PasskeysView {
         cx.notify();
     }
 
-    fn execute_delete(
-        &mut self,
-        credential_id: String,
-        pin: String,
-        cx: &mut Context<Self>,
-    ) {
+    fn execute_delete(&mut self, credential_id: String, pin: String, cx: &mut Context<Self>) {
         if self.loading {
             return;
         }
@@ -126,28 +127,27 @@ impl PasskeysView {
         self._task = Some(cx.spawn(async move |_, cx| {
             let result = io::delete_credential(pin.clone(), credential_id);
 
-            let _ = entity.update(cx, |this, cx| {
-                match result {
-                    Ok(_) => {
-                        // Refresh credentials
-                        let _ = this.refresh_credentials(pin, cx);
-                        cx.emit(PasskeysEvent::CloseDialog);
-                        cx.emit(PasskeysEvent::Notification("Credential deleted".to_string()));
-                    }
-                    Err(e) => {
-                        this.loading = false;
-                        let msg = format!("Error deleting: {}", e);
-                        cx.emit(PasskeysEvent::Notification(msg));
-                        cx.notify();
-                    }
+            let _ = entity.update(cx, |this, cx| match result {
+                Ok(_) => {
+                    this.refresh_credentials(pin, cx);
+                    cx.emit(PasskeysEvent::CloseDialog);
+                    cx.emit(PasskeysEvent::Notification(
+                        "Credential deleted".to_string(),
+                    ));
+                }
+                Err(e) => {
+                    this.loading = false;
+                    let msg = format!("Error deleting: {}", e);
+                    cx.emit(PasskeysEvent::Notification(msg));
+                    cx.notify();
                 }
             });
         }));
     }
 
-    fn refresh_credentials(&mut self, pin: String, cx: &mut Context<Self>) -> Task<()> {
+    fn refresh_credentials(&mut self, pin: String, cx: &mut Context<Self>) {
         let entity = cx.entity().downgrade();
-        cx.spawn(async move |_, cx| {
+        self._task = Some(cx.spawn(async move |_, cx| {
             let result = io::get_credentials(pin);
             let _ = entity.update(cx, |this, cx| {
                 this.loading = false;
@@ -156,37 +156,395 @@ impl PasskeysView {
                 }
                 cx.notify();
             });
-        })
+        }));
     }
 
     fn open_unlock_dialog(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let pin_input = cx.new(|cx| InputState::new(window, cx).placeholder("Enter FIDO PIN"));
-        self.active_modal = Some(ActiveModal::Unlock(pin_input));
-        cx.notify();
+        let pin_input = cx.new(|cx| {
+            InputState::new(window, cx)
+                .placeholder("Enter FIDO PIN")
+                .masked(true)
+        });
+        let view_handle = cx.entity().downgrade();
+
+        window.open_dialog(cx, move |dialog, _, _| {
+            let view_handle_for_footer = view_handle.clone();
+            let pin_input_for_footer = pin_input.clone();
+
+            dialog
+                .title("Unlock Storage")
+                .child(
+                    v_flex()
+                        .gap_4()
+                        .child("Enter your device PIN to view saved passkeys")
+                        .child(Input::new(&pin_input)),
+                )
+                .footer(move |_, _, _, _| {
+                    let view = view_handle_for_footer.clone();
+                    let input = pin_input_for_footer.clone();
+
+                    vec![
+                        Button::new("cancel")
+                            .label("Cancel")
+                            .on_click(|_, window, cx| {
+                                window.close_dialog(cx);
+                            }),
+                        Button::new("unlock").primary().label("Unlock").on_click(
+                            move |_, _window, cx| {
+                                let pin = input.read(cx).text().to_string();
+                                if !pin.is_empty() {
+                                    let _ = view.update(cx, |this, cx| {
+                                        this.unlock_storage(pin, cx);
+                                    });
+                                }
+                            },
+                        ),
+                    ]
+                })
+        });
     }
 
     fn open_delete_dialog(
         &mut self,
         cred: &StoredCredential,
         pin: String,
-        _window: &mut Window,
+        window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        self.active_modal = Some(ActiveModal::Delete {
-            cred: cred.clone(),
-            pin,
+        let cred_id = cred.credential_id.clone();
+        let pin_str = pin.clone();
+        let name = cred.rp_id.clone();
+        let view_handle = cx.entity().downgrade();
+
+        window.open_dialog(cx, move |dialog, _, _| {
+            let view_handle = view_handle.clone();
+            let cred_id = cred_id.clone();
+            let pin_str = pin_str.clone();
+
+            dialog
+                .confirm()
+                .title("Delete Passkey")
+                .child(format!(
+                    "Are you sure you want to delete the passkey for {}?",
+                    name
+                ))
+                .on_ok(move |_, _, cx| {
+                    let _ = view_handle.update(cx, |this, cx| {
+                        this.execute_delete(cred_id.clone(), pin_str.clone(), cx);
+                    });
+                    false
+                })
+                .on_cancel(|_, _, _| true)
+                .button_props(
+                    gpui_component::dialog::DialogButtonProps::default()
+                        .ok_text("Delete")
+                        .ok_variant(ButtonVariant::Danger),
+                )
         });
-        cx.notify();
     }
 
     fn open_change_pin_dialog(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        // TODO: Implement Change PIN Dialog
-        // Placeholder for now
-        window.open_dialog(cx, |dialog, _, _| {
-            dialog
-                .title("Not Implemented")
-                .child("Change PIN dialog coming soon")
+        let current_pin = cx.new(|cx| {
+            InputState::new(window, cx)
+                .placeholder("Enter current PIN")
+                .masked(true)
         });
+        let new_pin = cx.new(|cx| {
+            InputState::new(window, cx)
+                .placeholder("Enter new PIN")
+                .masked(true)
+        });
+        let confirm_pin = cx.new(|cx| {
+            InputState::new(window, cx)
+                .placeholder("Confirm new PIN")
+                .masked(true)
+        });
+
+        let view_handle = cx.entity().downgrade();
+
+        window.open_dialog(cx, move |dialog, _, _| {
+            let view = view_handle.clone();
+            let current = current_pin.clone();
+            let new = new_pin.clone();
+            let confirm = confirm_pin.clone();
+
+            dialog
+                .title("Change PIN")
+                .child("Enter your current PIN and choose a new one.")
+                .child(
+                    v_flex()
+                        .gap_4()
+                        .child("Current PIN")
+                        .child(Input::new(&current))
+                        .child("New PIN")
+                        .child(Input::new(&new))
+                        .child("Confirm New PIN")
+                        .child(Input::new(&confirm)),
+                )
+                .footer(move |_, _window, _cx, _| {
+                    let view = view.clone();
+                    let current = current.clone();
+                    let new = new.clone();
+                    let confirm = confirm.clone();
+
+                    vec![
+                        Button::new("cancel")
+                            .label("Cancel")
+                            .on_click(|_, window, cx| window.close_dialog(cx)),
+                        Button::new("confirm").primary().label("Confirm").on_click(
+                            move |_, _, cx| {
+                                let current_val = current.read(cx).text().to_string();
+                                let new_val = new.read(cx).text().to_string();
+                                let confirm_val = confirm.read(cx).text().to_string();
+
+                                if current_val.is_empty() {
+                                    return;
+                                    // Todo: show error
+                                }
+
+                                if new_val != confirm_val {
+                                    // Todo: show validation error (toast?)
+                                    let _ = view.update(cx, |_, cx| {
+                                        cx.emit(PasskeysEvent::Notification(
+                                            "PINs do not match".to_string(),
+                                        ));
+                                    });
+                                    return;
+                                }
+
+                                if new_val.len() < 4 {
+                                    let _ = view.update(cx, |_, cx| {
+                                        cx.emit(PasskeysEvent::Notification(
+                                            "PIN too short".to_string(),
+                                        ));
+                                    });
+                                    return;
+                                }
+
+                                let _ = view.update(cx, |this, cx| {
+                                    this.change_pin(current_val, new_val, cx);
+                                });
+                            },
+                        ),
+                    ]
+                })
+        });
+    }
+
+    fn open_min_pin_length_dialog(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let current_min = self
+            .fido_info
+            .as_ref()
+            .map(|f| f.min_pin_length)
+            .unwrap_or(4);
+
+        let slider = cx.new(|_| {
+            SliderState::new()
+                .min(4.0)
+                .max(63.0)
+                .step(1.0)
+                .default_value(current_min as f32)
+        });
+
+        let current_pin = cx.new(|cx| {
+            InputState::new(window, cx)
+                .placeholder("Enter current PIN")
+                .masked(true)
+        });
+        let new_pin = cx.new(|cx| {
+            InputState::new(window, cx)
+                .placeholder("Enter new PIN")
+                .masked(true)
+        });
+        let confirm_pin = cx.new(|cx| {
+            InputState::new(window, cx)
+                .placeholder("Confirm new PIN")
+                .masked(true)
+        });
+
+        // Create the label view
+        let label_view = cx.new(|_cx| SliderLabel {
+            slider: slider.clone(),
+        });
+
+        let view_handle = cx.entity().downgrade();
+
+        window.open_dialog(cx, move |dialog, _, _| {
+            let view = view_handle.clone();
+            let current = current_pin.clone();
+            let new = new_pin.clone();
+            let confirm = confirm_pin.clone();
+            let slider_handle = slider.clone();
+
+            dialog
+                .title("Update Minimum PIN Length")
+                .child(
+                    "Set the minimum allowed PIN length (4-63 characters) and enter a new PIN that meets this requirement.",
+                )
+                .child(
+                    v_flex()
+                        .gap_4()
+                        .child(
+                             v_flex()
+                                .gap_2()
+                                .child(label_view.clone())
+                                .child(Slider::new(&slider_handle))
+                        )
+                        .child("Current PIN")
+                        .child(Input::new(&current))
+                        .child(
+                             v_flex()
+                                 .gap_2()
+                                 .child(format!("New PIN (min {} chars)", current_min)) 
+                                 .child(Input::new(&new))
+                        )
+                        .child("Confirm New PIN")
+                        .child(Input::new(&confirm)),
+                )
+                .footer(move |_, _window, _cx, _| {
+                    let view = view.clone();
+                    let current = current.clone();
+                    let new = new.clone();
+                    let confirm = confirm.clone();
+                    let slider = slider_handle.clone();
+
+                    vec![
+                        Button::new("cancel")
+                            .label("Cancel")
+                            .on_click(|_, window, cx| window.close_dialog(cx)),
+                        Button::new("update")
+                            .primary()
+                            .label("Update")
+                            .on_click(move |_, _, cx| {
+                                let current_val = current.read(cx).text().to_string();
+                                let new_val = new.read(cx).text().to_string();
+                                let confirm_val = confirm.read(cx).text().to_string();
+                                let min_len = slider.read(cx).value().start() as u8;
+
+                                if current_val.is_empty() {
+                                    return;
+                                }
+
+                                if !new_val.is_empty() {
+                                    if new_val != confirm_val {
+                                        let _ = view.update(cx, |_, cx| {
+                                            cx.emit(PasskeysEvent::Notification("PINs do not match".to_string()));
+                                        });
+                                        return;
+                                    }
+                                    if new_val.len() < min_len as usize {
+                                        let _ = view.update(cx, |_, cx| {
+                                            cx.emit(PasskeysEvent::Notification(format!("PIN must be at least {} characters", min_len)));
+                                        });
+                                        return;
+                                    }
+                                }
+                                let _ = view.update(cx, |this, cx| {
+                                    this.update_min_length(current_val, min_len, new_val, cx);
+                                });
+                            }),
+                    ]
+                })
+        });
+    }
+
+    fn change_pin(&mut self, current: String, new: String, cx: &mut Context<Self>) {
+        if self.loading {
+            return;
+        }
+        self.loading = true;
+        cx.notify();
+        let entity = cx.entity().downgrade();
+
+        self._task = Some(cx.spawn(async move |_, cx| {
+            let result = io::change_fido_pin(Some(current), new);
+            let _ = entity.update(cx, |this, cx| {
+                this.loading = false;
+                match result {
+                    Ok(msg) => {
+                        cx.emit(PasskeysEvent::CloseDialog);
+                        cx.emit(PasskeysEvent::Notification(msg));
+                        // Refresh device info
+                        if let Ok(info) = io::get_fido_info() {
+                            this.fido_info = Some(info);
+                        }
+                    }
+                    Err(e) => {
+                        cx.emit(PasskeysEvent::Notification(format!("Error: {}", e)));
+                    }
+                }
+                cx.notify();
+            });
+        }));
+    }
+
+    fn update_min_length(
+        &mut self,
+        current: String,
+        min_len: u8,
+        new_pin: String,
+        cx: &mut Context<Self>,
+    ) {
+        if self.loading {
+            return;
+        }
+        self.loading = true;
+        cx.notify();
+        let entity = cx.entity().downgrade();
+
+        self._task = Some(cx.spawn(async move |_, cx| {
+            let res_len = io::set_min_pin_length(current.clone(), min_len);
+
+            if let Err(e) = res_len {
+                let _ = entity.update(cx, |this, cx| {
+                    this.loading = false;
+                    cx.emit(PasskeysEvent::Notification(format!(
+                        "Failed to set length: {}",
+                        e
+                    )));
+                    cx.notify();
+                });
+                return;
+            }
+
+            if !new_pin.is_empty() {
+                let res_pin = io::change_fido_pin(Some(current), new_pin);
+                let _ = entity.update(cx, |this, cx| {
+                    this.loading = false;
+                    match res_pin {
+                        Ok(_) => {
+                            cx.emit(PasskeysEvent::CloseDialog);
+                            cx.emit(PasskeysEvent::Notification(
+                                "Minimum length and PIN updated".to_string(),
+                            ));
+                            if let Ok(info) = io::get_fido_info() {
+                                this.fido_info = Some(info);
+                            }
+                        }
+                        Err(e) => {
+                            cx.emit(PasskeysEvent::Notification(format!(
+                                "Length set, but PIN change failed: {}",
+                                e
+                            )));
+                        }
+                    }
+                    cx.notify();
+                });
+            } else {
+                let _ = entity.update(cx, |this, cx| {
+                    this.loading = false;
+                    cx.emit(PasskeysEvent::CloseDialog);
+                    cx.emit(PasskeysEvent::Notification(format!(
+                        "Minimum length updated to {}",
+                        min_len
+                    )));
+                    if let Ok(info) = io::get_fido_info() {
+                        this.fido_info = Some(info);
+                    }
+                    cx.notify();
+                });
+            }
+        }));
     }
 
     fn render_no_device(&self, theme: &Theme) -> impl IntoElement {
@@ -231,12 +589,7 @@ impl PasskeysView {
             .title("PIN Management")
             .icon(Icon::default().path("icons/key.svg"))
             .description("Configure FIDO2 PIN security")
-            .child(
-                v_flex()
-                    .gap_4()
-                    .child(status_row)
-                    .child(min_len_row),
-            )
+            .child(v_flex().gap_4().child(status_row).child(min_len_row))
     }
 
     fn render_pin_status_row(&self, cx: &mut Context<Self>) -> impl IntoElement {
@@ -276,6 +629,7 @@ impl PasskeysView {
             )
             .child(
                 PFButton::new(if pin_set { "Change PIN" } else { "Set PIN" })
+                    .id("change-pin-btn")
                     .on_click(listener),
             )
     }
@@ -314,7 +668,11 @@ impl PasskeysView {
             )
             .child(
                 PFButton::new("Update Minimum Length")
-                    .disabled(!pin_set),
+                    .id("update-min-len-btn")
+                    .disabled(!pin_set)
+                    .on_click(cx.listener(|this, _, window, cx| {
+                        this.open_min_pin_length_dialog(window, cx);
+                    })),
             )
     }
 
@@ -360,9 +718,7 @@ impl PasskeysView {
                         div()
                             .text_color(theme.muted_foreground)
                             .text_sm()
-                            .child(
-                                "Unlock your device to view and manage passkeys.",
-                            ),
+                            .child("Unlock your device to view and manage passkeys."),
                     )
                     .child(
                         PFIconButton::new(
@@ -380,17 +736,6 @@ impl PasskeysView {
             this.lock_storage(cx);
         });
 
-        // Prepare credential cards before getting theme
-        // We need to iterate self.credentials
-        // render_credential_card needs cx for listeners.
-        // It also needs theme.
-        // So render_credential_card must adhere to the pattern: create listeners, then get theme.
-        
-        // This is tricky for map.
-        // We can create a list of listeners first?
-        // Or simply `render_credential_card` should take `cx` and handle it.
-        // Yes, `render_credential_card(&self, cred, cx)`.
-        
         let mut cards = Vec::new();
         for cred in &self.credentials {
             cards.push(self.render_credential_card(cred, cx).into_any_element());
@@ -446,7 +791,8 @@ impl PasskeysView {
                             ),
                     )
                     .child(if self.credentials.is_empty() {
-                        self.render_empty_credentials_with_theme(theme).into_any_element()
+                        self.render_empty_credentials_with_theme(theme)
+                            .into_any_element()
                     } else {
                         div()
                             .grid()
@@ -457,8 +803,7 @@ impl PasskeysView {
                     }),
             )
     }
-    
-    // Rework layout of render_empty_credentials to take theme, assuming call site handles it.
+
     fn render_empty_credentials_with_theme(&self, theme: &Theme) -> impl IntoElement {
         v_flex()
             .items_center()
@@ -491,109 +836,15 @@ impl PasskeysView {
             )
     }
 
-    fn render_modal(&self, cx: &mut Context<Self>) -> impl IntoElement {
-        if let Some(modal) = &self.active_modal {
-             let theme = cx.theme();
-             let content = match modal {
-                ActiveModal::Unlock(pin_input) => {
-                     let pin_input_clone = pin_input.clone();
-                     v_flex()
-                        .gap_4()
-                        .child("Enter your device PIN to view saved passkeys")
-                        .child(Input::new(pin_input))
-                        .child(
-                            h_flex()
-                                .gap_2()
-                                .justify_end()
-                                .child(
-                                    PFButton::new("Cancel")
-                                        .on_click(cx.listener(|this, _, _, cx| {
-                                            this.active_modal = None;
-                                            cx.notify();
-                                        }))
-                                )
-                                .child(
-                                    PFButton::new("Unlock")
-                                        // Primary/Zinc style is default
-                                        .on_click(cx.listener(move |this, _, _, cx| {
-                                            let pin = pin_input_clone.read(cx).text().to_string();
-                                            if !pin.is_empty() {
-                                                this.unlock_storage(pin, cx);
-                                                this.active_modal = None; // Manual close on success
-                                                cx.notify();
-                                            }
-                                        }))
-                                )
-                        )
-                },
-                ActiveModal::Delete { cred, pin } => {
-                     let cred_id = cred.credential_id.clone();
-                     let pin_str = pin.clone();
-                     let name = cred.rp_id.clone();
-                     
-                     v_flex()
-                        .gap_4()
-                        .child(format!("Are you sure you want to delete the passkey for {}?", name))
-                        .child(
-                            h_flex()
-                                .gap_2()
-                                .justify_end()
-                                .child(
-                                    PFButton::new("Cancel")
-                                        .on_click(cx.listener(|this, _, _, cx| {
-                                            this.active_modal = None;
-                                            cx.notify();
-                                        }))
-                                )
-                                .child(
-                                    PFButton::new("Delete")
-                                        .with_colors(rgb(0x7f1d1d), rgb(0x991b1b), rgb(0xfca5a5)) // Danger colors
-                                        .on_click(cx.listener(move |this, _, _, cx| {
-                                            this.execute_delete(cred_id.clone(), pin_str.clone(), cx);
-                                            this.active_modal = None;
-                                            cx.notify();
-                                        }))
-                                )
-                        )
-                }
-                _ => div().child("Not Implemented"),
-             };
-
-             div()
-                .absolute()
-                .top_0()
-                .left_0()
-                .size_full()
-                .flex()
-                .items_center()
-                .justify_center()
-                .bg(gpui::black().opacity(0.5))
-                .child(
-                    div()
-                        .w(px(400.0))
-                        .bg(theme.background)
-                        .border_1()
-                        .border_color(theme.border)
-                        .rounded_lg()
-                        .shadow_lg()
-                        .p_6()
-                        .child(content)
-                )
-                .into_any_element()
-        } else {
-             div().into_any_element()
-        }
-    }
-
     fn render_credential_card(
         &self,
         cred: &StoredCredential,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
         let cred_clone = cred.clone();
-        
+
         let delete_listener = cx.listener(move |this, _, window, cx| {
-             this.open_ask_delete_pin(cred_clone.clone(), window, cx);
+            this.open_ask_delete_pin(cred_clone.clone(), window, cx);
         });
 
         let theme = cx.theme();
@@ -672,16 +923,14 @@ impl Render for PasskeysView {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let device_connected = self.device_status.is_some();
         if !device_connected {
-            // Static render, need theme.
-            // Since we don't need listeners here, we can just get theme.
-            let theme = cx.theme(); // borrow cx
-            return 
-                PageView::build(
-                    "Passkeys",
-                     "Manage your security PIN and the FIDO credentials (passkeys) stored on your device.",
-                    self.render_no_device(theme).into_any_element(),
-                    theme
-                ).into_any_element();
+            let theme = cx.theme();
+            return PageView::build(
+                "Passkeys",
+                "Manage your security PIN and the FIDO credentials (passkeys) stored on your device.",
+                self.render_no_device(theme).into_any_element(),
+                theme,
+            )
+            .into_any_element();
         }
 
         let has_fido = self
@@ -690,39 +939,34 @@ impl Render for PasskeysView {
             .map(|s| s.method == crate::device::types::DeviceMethod::Fido)
             .unwrap_or(false)
             || self.fido_info.is_some();
-            
+
         if !has_fido {
-             let theme = cx.theme();
-             return PageView::build(
-                    "Passkeys",
-                     "Manage your security PIN and the FIDO credentials (passkeys) stored on your device.",
-                    self.render_not_supported(theme).into_any_element(),
-                    theme
-                ).into_any_element();
+            let theme = cx.theme();
+            return PageView::build(
+                "Passkeys",
+                "Manage your security PIN and the FIDO credentials (passkeys) stored on your device.",
+                self.render_not_supported(theme).into_any_element(),
+                theme,
+            )
+            .into_any_element();
         }
 
-        // Main view
-        // 1. Render content (calls helpers which access cx for listeners and theme)
         let content = v_flex()
-             .gap_6()
-             .child(self.render_pin_management(cx))
-             .child(self.render_stored_passkeys(cx));
-             
-        // 2. Get theme for PageView wrapper
+            .gap_6()
+            .child(self.render_pin_management(cx))
+            .child(self.render_stored_passkeys(cx));
+
         let theme = cx.theme();
-        
+
         div()
             .size_full()
-            .relative() // Critical for absolute modal
-            .child(
-                PageView::build(
-                    "Passkeys",
-                    "Manage your security PIN and the FIDO credentials (passkeys) stored on your device.",
-                    content.into_any_element(),
-                    theme,
-                )
-            )
-            .child(self.render_modal(cx))
+            .relative()
+            .child(PageView::build(
+                "Passkeys",
+                "Manage your security PIN and the FIDO credentials (passkeys) stored on your device.",
+                content.into_any_element(),
+                theme,
+            ))
             .into_any_element()
     }
 }

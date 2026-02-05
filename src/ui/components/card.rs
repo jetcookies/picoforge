@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use gpui::*;
 use gpui_component::{ActiveTheme, Icon, Theme, h_flex, v_flex};
 

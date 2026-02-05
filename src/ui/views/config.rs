@@ -77,7 +77,6 @@ impl ConfigView {
     ) -> Self {
         let config = device_status.as_ref().map(|s| &s.config);
 
-        // Prepare Vendor Options
         let vendors: Vec<VendorSelectOption> = UsbIdentityPreset::all()
             .iter()
             .map(|preset| {
@@ -89,7 +88,6 @@ impl ConfigView {
             })
             .collect();
 
-        // Prepare Driver Options
         let drivers: Vec<DriverSelectOption> = LedDriverType::all()
             .iter()
             .map(|driver| DriverSelectOption {
@@ -98,7 +96,6 @@ impl ConfigView {
             })
             .collect();
 
-        // Determine Initial State
         let current_vid: SharedString = config
             .map(|c| c.vid.clone().into())
             .unwrap_or_else(|| "CAFE".into());
@@ -116,11 +113,9 @@ impl ConfigView {
             .unwrap_or_else(|| "10".into());
         let current_brightness = config.map(|c| c.led_brightness as f32).unwrap_or(8.0);
 
-        // Identify Preset
         let initial_preset = UsbIdentityPreset::from_vid_pid(&current_vid, &current_pid);
         let is_custom_vendor = initial_preset == UsbIdentityPreset::Custom;
 
-        // Find index for the SelectState
         let initial_vendor_idx = UsbIdentityPreset::all()
             .iter()
             .position(|p| *p == initial_preset)
@@ -143,7 +138,6 @@ impl ConfigView {
         let led_gpio_input =
             cx.new(|cx| InputState::new(window, cx).default_value(current_led_gpio.clone()));
 
-        // Identify Driver
         let current_driver_val = config.and_then(|c| c.led_driver).unwrap_or(0);
         let initial_driver_idx = LedDriverType::all()
             .iter()
@@ -173,7 +167,6 @@ impl ConfigView {
                         this.pid_input
                             .update(cx, |input, cx| input.set_value(pid, window, cx));
                     } else {
-                        // Custom selected
                         this.is_custom_vendor = true;
                     }
                     cx.notify();
@@ -370,7 +363,6 @@ impl ConfigView {
         self.device_status = status.clone();
         let config = status.as_ref().map(|s| &s.config);
 
-        // Update inputs
         let vid = config
             .map(|c| c.vid.clone())
             .unwrap_or_else(|| "CAFE".into());
@@ -401,13 +393,11 @@ impl ConfigView {
         self.touch_timeout_input
             .update(cx, |input, cx| input.set_value(timeout, window, cx));
 
-        // Update flags
         self.led_dimmable = config.map(|c| c.led_dimmable).unwrap_or(true);
         self.led_steady = config.map(|c| c.led_steady).unwrap_or(false);
         self.power_cycle = config.map(|c| c.power_cycle_on_reset).unwrap_or(false);
         self.enable_secp256k1 = config.map(|c| c.enable_secp256k1).unwrap_or(true);
 
-        // Update slider
         let brightness = config.map(|c| c.led_brightness as f32).unwrap_or(8.0);
         self.led_brightness_slider
             .update(cx, |slider, cx| slider.set_value(brightness, window, cx));
@@ -645,8 +635,6 @@ impl ConfigView {
 impl Render for ConfigView {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = cx.theme();
-
-        // If not connected, show placeholder
         if self.device_status.is_none() {
             return PageView::build(
                 "Configuration",

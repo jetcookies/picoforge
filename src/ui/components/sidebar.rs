@@ -62,7 +62,6 @@ impl<V: 'static> AppSidebar<V> {
         let border_color = cx.theme().sidebar_border;
         let muted_foreground = cx.theme().muted_foreground;
 
-        // Clone for closures
         let on_refresh = self.on_refresh.clone();
         let on_refresh_collapsed = self.on_refresh.clone();
 

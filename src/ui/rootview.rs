@@ -11,6 +11,7 @@ use crate::ui::{
 
 use gpui::prelude::*;
 use gpui::*;
+use gpui_component::Root;
 use gpui_component::{
     ActiveTheme, IconName, TitleBar, WindowExt,
     button::{Button, ButtonVariants},
@@ -31,8 +32,6 @@ pub struct ApplicationRoot {
 
 impl ApplicationRoot {
     pub fn new(cx: &mut Context<Self>) -> Self {
-        // We no longer need to create a persistent PFIconButton entity here
-
         let mut this = Self {
             active_view: ActiveView::Home,
             collapsed: false,
@@ -104,6 +103,8 @@ impl Render for ApplicationRoot {
             self.sidebar_width = target_width;
         }
 
+        let dialog_layer = Root::render_dialog_layer(window, cx);
+
         div().size_full().overflow_hidden().child(
             h_flex()
                 .size_full()
@@ -117,7 +118,6 @@ impl Render for ApplicationRoot {
                     .on_select(|this: &mut Self, view, _, _| {
                         this.active_view = view;
                     })
-                    // Here is the new connection: passing the refresh logic to the sidebar
                     .on_refresh(|this, _, cx| {
                         this.refresh_device_status(cx);
                     })
@@ -211,7 +211,8 @@ impl Render for ApplicationRoot {
                                     }
                                 }),
                         ),
-                ),
+                )
+                .children(dialog_layer),
         )
     }
 }

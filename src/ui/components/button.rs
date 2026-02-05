@@ -1,4 +1,4 @@
-// TODO: convert this from an entity to a stateless button component.
+#![allow(unused)]
 
 use crate::ui::colors;
 use gpui::prelude::*;
@@ -12,6 +12,7 @@ use gpui_component::{
 /// A stateless text button wrapper
 #[derive(IntoElement)]
 pub struct PFButton {
+    id: SharedString,
     text: SharedString,
     on_click: Option<Box<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>>,
     bg_color_start: Rgba,
@@ -26,8 +27,10 @@ pub struct PFButton {
 
 impl PFButton {
     pub fn new(text: impl Into<SharedString>) -> Self {
+        let text = text.into();
         Self {
-            text: text.into(),
+            id: text.clone(),
+            text,
             on_click: None,
             bg_color_start: rgb(0x1b1b1d),
             bg_color_hover: rgb(0x232325),
@@ -38,6 +41,11 @@ impl PFButton {
             small: false,
             loading: false,
         }
+    }
+
+    pub fn id(mut self, id: impl Into<SharedString>) -> Self {
+        self.id = id.into();
+        self
     }
 
     pub fn on_click(
@@ -88,12 +96,11 @@ impl PFButton {
     }
 }
 
-// RenderOnce makes this a "Component" not an "Entity"
 impl RenderOnce for PFButton {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let text = self.text;
 
-        let mut btn = Button::new("pf-btn").custom(
+        let mut btn = Button::new(self.id).custom(
             ButtonCustomVariant::new(cx)
                 .color(self.bg_color_start.into())
                 .hover(self.bg_color_hover.into())
@@ -123,7 +130,6 @@ impl RenderOnce for PFButton {
         };
 
         if let Some(handler) = self.on_click {
-            // We cast the handler to satisfy GPUI's generic requirements
             btn = btn.on_click(move |e, w, c| handler(e, w, c));
         }
 
